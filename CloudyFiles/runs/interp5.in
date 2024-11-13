@@ -1,0 +1,33 @@
+table SED "star_kurucz_39600.dat" # hot star, test with other spectra
+#
+#predict emission from a unit volume 
+#log thickness in cm
+set dr 0
+#
+#vary ionization parameter - 15 iterations
+ionization parameter -2 vary
+grid -6 1 0.5
+#
+#the log of the hydrogen density - 15 iterations
+hden 1 vary
+grid -1 6 0.5
+#
+#
+#the assumed kinetic temperature in K - vary in grid - 11 iterations
+constant temperature 3 vary
+grid range from 2 to 7 step 0.5
+#
+# ISM Init File
+init "ism.ini"
+#
+#Shorten simulation by stopping at zone 1
+stop zone 1
+#
+#save the file
+#set the line width so lines appear on the save continuum
+set save line width 10 km/s
+save grid "interp.grd" no hash
+# Line List: Emissions for lines in the second file -
+# keyword absolute gives in units erg cm-2 s-1
+save line list "nebula.linesPrediction" "LineList_Nebular.dat" absolute no hash last
+

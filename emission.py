@@ -1,8 +1,8 @@
 import numpy as np
-import matplotlib as plt
+#import matplotlib as plt
 from scipy.interpolate import RegularGridInterpolator
 import copy
-import yt
+#import yt
 
 # Read line emission data (line list, run params)
 filename='CloudyFiles/linelist.dat'
@@ -116,8 +116,8 @@ def get_line_emission(idx, dens_normalized):
         # for non-Hydrogen and Helium lines
         interp_val = interpolator(tup)
 
-        #if idx not in [0, 10]:
-        #   interp_val = interp_val*data['gas', 'metallicity']
+        if idx not in [0, 10]:
+           interp_val = interp_val*data['gas', 'metallicity']*4
 
         if dens_normalized:
            interp_val = interp_val*data['gas', 'number_density']**2

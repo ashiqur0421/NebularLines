@@ -1,0 +1,38 @@
+# Line List for Nebular Emission Lines of Interest
+H  1 6562.80A # H Alpha
+#
+He 2 1640.41A # PopIII
+#
+C  2 1335.66A
+C  3 1906.68A
+C  3 1908.73A
+C  4 1549.00A
+#
+O  1 1304.86A
+O  1 6300.30A
+O  3 1666.15A # Corresponds to O3, not O2
+O  2 3728.80A
+O  2 3726.10A
+#O  3 1663A Did not find. Did find:
+O  3 1660.81
+O  3 4363.21A
+O  3 4958.91A
+O  3 5006.84A
+#O  4 1440A Did not find
+#
+Mg 2 2795.53A
+Mg 2 2802.71A
+Ne 3 3868.76A
+#Ne 3 3889A # Did not find
+Ne 3 3967.47A
+#
+N  5 1238.82A
+N  5 1242.80A
+N  4 1486.50A #gnz11
+N  3 1749.67A #gnz11
+#
+#Ca 2 3934A
+S  2 6716.44A
+S  2 6730.82A
+#
+#Si 5 1440A # Same as O4? Did not find a line near 1440A, there are other lines. Si 8

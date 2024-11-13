@@ -21,11 +21,13 @@ plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
 data=0
 
 if data == 0:
-  filename='nebula.linesPredictionO'
+  #filename='nebula.linesPredictionO'
+  filename='/Users/bnowicki/Documents/GitHub/NebularLines/CloudyFiles/nebula.linesPredictionO'
   titl=["H1 6562.80A","O1 1304.86A","O1 6300.30A","O2 3728.80A","O2 3726.10A","O3 1660.81A","O3 1666.15A","O3 4363.21A","O3 4958.91A","O3 5006.84A"]
 
 if data == 1:
-  filename='nebula.linesPredictionCN'
+  #filename='nebula.linesPredictionCN'
+  filename='/Users/bnowicki/Documents/GitHub/NebularLines/CloudyFiles/nebula.linesPredictionCN'
   titl=["He2 1640.41A","C2 1335.66A","C3 1906.68A","C3 1908.73A","C4 1549.00A","Mg2 2795.53A","Mg2 2802.71A","Ne3 3868.76A","Ne3 3967.47A","N5 1238.82A","N5 1242.80A","N4 1486.50A","N3 1749.67A","S2 6716.44A","S2 6730.82A"]
 
 ncols=len(titl)
@@ -142,10 +144,13 @@ def implot(cub, logU, logN, stepU, stepN):
     ex1=(minT-stepT/2.0, maxT+stepT/2.0,maxN+stepN/2.0,minN-stepN/2.0)
 
     #cmap='gist_ncar'
-    ax[0][i].imshow(slicel,extent=ex0,vmin=vmin,vmax=vmax)
+    im1 = ax[0][i].imshow(slicel,extent=ex0,vmin=vmin,vmax=vmax)
     #ax[0][i].imshow(slicel,extent=ex0)
 
-    ax[1][i].imshow(sliceh,extent=ex1,vmin=vmin1,vmax=vmax1)
+    im2 = ax[1][i].imshow(sliceh,extent=ex1,vmin=vmin1,vmax=vmax1)
+
+    #plt.colorbar(im1, ax=ax[0][i])
+    #plt.colorbar(im2, ax=ax[1][i])
 
     #ax[1][i].imshow(ratio,extent=ex)
     ax[0][0].set_ylabel('log U')
@@ -159,7 +164,3 @@ implot(cub, 0.0, -1.0, stepU, stepN)
 implot(interpcub, 0.0, -1.0, stepU/2.0, stepN/2.0)
 
 plt.show()
-
-# top and bottom plots - what value to keep constant
-# github
-# ytproject
