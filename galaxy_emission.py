@@ -181,7 +181,7 @@ def plot_diagnostics():
     proj_metallicity = proj_plot((400, 'pc'), center_max, ('gas', 'metallicity'), ('gas', 'number_density'))
     proj_metallicity.save('400pc_')
 
-#plot_diagnostics()
+plot_diagnostics()
 
 '''
 Visualizing Line Intensities
@@ -223,43 +223,47 @@ omega_lambda = ds.omega_lambda
 cosmo = FlatLambdaCDM(H0=70, Om0=omega_matter)#, Om0=0.3)
 d_l = cosmo.luminosity_distance(z)*3.086e24 # convert Mpc to cm
 flux_arr = luminosities/(4*np.pi*d_l**2)#/100
+flux_arr = flux_arr.value
 
 # resolving power
 # R = lambda/delta_lambda
 R = 1000
-line_widths = wavelengths/R # Angstrom
 
-def plot_spectra(wavelengths, luminosities, flux_arr, z, noise_lvl, line_widths, \
-                 sim_spectra=False, redshift_wavelengths=False):
+def plot_spectra(wavelengths, luminosities, flux_arr, z, noise_lvl, R, \
+                 fname, sim_spectra=False, redshift_wavelengths=False):
 
-    (ax1, ax2), fig = plt.subplots(2, sharex=True)
+    fig, (ax1, ax2) = plt.subplots(2, sharex=True)
 
     # Display spectra at redshifted wavelengths
     # lambda_obs = (1+z)*lambda_rest
     if redshift_wavelengths:
-        wavelengths = (1+z)*wavelengths
+        wavelengths = (1+z)*np.array(wavelengths)
+
+    line_widths = np.array(wavelengths)/R # Angstrom
 
     if sim_spectra:
-        x_range, y_vals_l = plot_voigts(wavelengths, luminosities, line_widths, 0.0, noise_lvl)
-        x_range, y_vals_f = plot_voigts(wavelengths, flux_arr, line_widths, 0.0, noise_lvl)
-        ax1.plot(x_range, np.log10(y_vals_l.value), 'o')
-        ax2.plot(x_range, np.log10(y_vals_f), 'o')
+        x_range, y_vals_l = plot_voigts(wavelengths, luminosities, line_widths, [0.0]*len(wavelengths), noise_lvl)
+        x_range, y_vals_f = plot_voigts(wavelengths, flux_arr, line_widths, [0.0]*len(wavelengths), noise_lvl)
+        ax1.plot(x_range, np.log10(y_vals_f))
+        ax2.plot(x_range, np.log10(y_vals_l))
         ax2.set_xlabel(r'Wavelength [$\AA$]')
-        ax1.set_ylabel(r'Log(Flux) [$erg s^{-1] cm^{-2}$]')
+        ax1.set_ylabel(r'Log(Flux) [$erg s^{-1} cm^{-2}$]')
         ax2.set_ylabel(r'Log(Luminosity) [$erg s^{-1}$]')
     else:
-        ax1.plot(wavelengths, np.log10(flux_arr.value), 'o')
+        ax1.plot(wavelengths, np.log10(flux_arr), 'o')
         ax2.plot(wavelengths, np.log10(luminosities), 'o')
         ax2.set_xlabel(r'Wavelength [$\AA$]')
-        ax1.set_ylabel(r'Log(Flux) [$erg s^{-1] cm^{-2}$]')
+        ax1.set_ylabel(r'Log(Flux) [$erg s^{-1} cm^{-2}$]')
         ax2.set_ylabel(r'Log(Luminosity) [$erg s^{-1}$]')
+
+    plt.savefig(fname)
 
 # Plot voigt profiles for spectral lines over a noise level
 # sigma - stdev of normal dist
 # gamma - FWHM of cauchy dist
 def plot_voigts(centers, amplitudes, sigmas, gammas, noise_lvl):
 
-    x_range = np.linspace(min(centers) - 5, max(centers) + 5, 1000)
+    x_range = np.linspace(min(centers) - 20, max(centers) + 20, 1000)
     y_vals = np.zeros_like(x_range)+noise_lvl
 
     for amp, center, sigma, gamma in zip(amplitudes, centers, sigmas, gammas):
@@ -270,10 +274,13 @@ def plot_voigts(centers, amplitudes, sigmas, gammas, noise_lvl):
 
 # TODO mult metallicity by 4?
 
-plot_spectra(wavelengths, luminosities, flux_arr, z, 10e-25, sim_spectra=False, \
-             redshift_wavelengths=False)
+plot_spectra(wavelengths, luminosities, flux_arr, z, 10e-25, R, fname='raw_spectra.png', \
+             sim_spectra=False, redshift_wavelengths=False)
 
-plot_spectra(wavelengths, luminosities, flux_arr, z, 10e-25, sim_spectra=True, \
-             redshift_wavelengths=False)
+plot_spectra(wavelengths, luminosities, flux_arr, z, 10e-25, R, fname='sim_spectra.png', \
+             sim_spectra=True, redshift_wavelengths=False)
+
+plot_spectra(wavelengths, luminosities, flux_arr, z, 10e-25, R, fname='sim_spectra_redshifted.png', \
+             sim_spectra=True, redshift_wavelengths=True)
 
 plt.show()
