@@ -227,6 +227,13 @@ flux_arr = flux_arr.value
 
 # resolving power
 # R = lambda/delta_lambda
+# thermal width - 10km/s
+# delv = sqrt(avg v^2) = sqrt(kT/mH mu - molecular weight)
+# not seen - need stronger resolution
+# Milky Way bulk velocity 200km/s avg v^2 = GMdark matter halo/Rvirial radius
+# winds - gas inside galaxy
+# feedback - explosion, gas expelled from galaxy, 1000km/s
+# broad line spectra- gas orbiting BH close
 R = 1000
 
 def plot_spectra(wavelengths, luminosities, flux_arr, z, noise_lvl, R, \
@@ -284,3 +291,10 @@ plot_spectra(wavelengths, luminosities, flux_arr, z, 10e-25, R, fname='sim_spect
              sim_spectra=True, redshift_wavelengths=True)
 
 plt.show()
+
+# TODO - intrinsic width of line - temperature, bulk velocity of grid points, sum voigts
+# assuming unresolved - width doesnt matter - R = 1000
+# resolve actual lines - each line contributed mostly by certain cells
+# where most of signal coming from - order cells by luminosity
+# full calculation for brightest
+# or sum cells within temp range - treat all as having same width. bulk velocity problem
