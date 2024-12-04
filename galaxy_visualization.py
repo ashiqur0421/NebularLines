@@ -81,9 +81,12 @@ def slc_plot(ds, width, center, field):
 # plot_type = 'slc' or 'proj', data_file - string of input data being read
 # Title String with Units
 def convert_to_plt(data_file, yt_plot, plot_type, field, lbox, title):
-    #fname = str(lbox) + 'pc_' + data_file + '_' + plot_type
-    fname = str(lbox) + 'pc_' + 'output_00273' + '_' + plot_type
-    # TODO fix filename
+    directory = data_file + '_analysis'
+
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+    fname = os.path.join(directory, str(lbox) + 'pc_' + field.replace('.', ',') + '_' + plot_type)
 
     plot_frb = yt_plot.frb
     p_img = np.array(plot_frb['gas', field])
@@ -99,83 +102,75 @@ def convert_to_plt(data_file, yt_plot, plot_type, field, lbox, title):
     plt.colorbar()
     plt.savefig(fname=fname)
 
-    # TODO fix plots, title
-
 '''
 Projection Plots of Ionization Parameter, Number Density, 
 Mass Density, Temperature, Metallicity
 '''
 
 # Wrapper for making diagnostic plots of given fields
-def plot_diagnostics(ds, sp, file, center, width):
+def plot_diagnostics(ds, sp, data_file, center, width):
     # Ionization Parameter
     proj_ion_param = proj_plot(ds, sp, (width, 'pc'), center, ('gas', 'ion-param'), ('gas', 'number_density'))
     #proj_ion_param.set_unit(('gas', 'ion-param'), '1')
-    convert_to_plt(file, proj_ion_param, 'proj', 'ion-param', width, 'Ionization Parameter')
-    proj_ion_param.save(str(width) + 'pc_')
+    convert_to_plt(data_file, proj_ion_param, 'proj', 'ion-param', width, 'Ionization Parameter')
+    #proj_ion_param.save(str(width) + 'pc')
 
     # Number Density
     proj_num_density = proj_plot(ds, sp, (width, 'pc'), center, ('gas', 'number_density'), ('gas', 'number_density'))
-    proj_num_density.save(str(width) + 'pc')
-    convert_to_plt(file, proj_num_density, 'proj', 'number_density', width, r'Number Density [$cm^{-3}$]')
+    #proj_num_density.save(str(width) + 'pc')
+    convert_to_plt(data_file, proj_num_density, 'proj', 'number_density', width, r'Number Density [$cm^{-3}$]')
 
     # Mass Density
     proj_density = proj_plot(ds, sp, (width, 'pc'), center, ('gas', 'density'), ('gas', 'number_density'))
-    proj_density.save(str(width) + 'pc_')
-    convert_to_plt(file, proj_density, 'proj', 'density', width, r'Density [$g\: cm^{-3}$]')
+    #proj_density.save(str(width) + 'pc')
+    convert_to_plt(data_file, proj_density, 'proj', 'density', width, r'Density [$g\: cm^{-3}$]')
 
     proj_density_wide = proj_plot(ds, sp, (1500, 'pc'), center, ('gas', 'density'), ('gas', 'number_density'))
-    proj_density_wide.save('1500pc_')
-    convert_to_plt(file, proj_density_wide, 'proj', 'density', 1500, r'Density [$g\: cm^{-3}$]')
+    #proj_density_wide.save('1500pc')
+    convert_to_plt(data_file, proj_density_wide, 'proj', 'density', 1500, r'Density [$g\: cm^{-3}$]')
 
     # Temperature
     proj_temp = proj_plot(ds, sp, (width, 'pc'), center, ('gas', 'temperature'), ('gas', 'number_density'))
-    proj_temp.save(str(width) + 'pc_')
-    convert_to_plt(file, proj_temp, 'proj', 'temperature', width, 'Temperature [K]')
+    #proj_temp.save(str(width) + 'pc')
+    convert_to_plt(data_file, proj_temp, 'proj', 'temperature', width, 'Temperature [K]')
 
     # Metallicity
     proj_metallicity = proj_plot(ds, sp, (width, 'pc'), center, ('gas', 'metallicity'), ('gas', 'number_density'))
-    proj_metallicity.save(str(width) + 'pc_')
-    convert_to_plt(file, proj_metallicity, 'proj', 'metallicity', width, 'Metallicity')
+    #proj_metallicity.save(str(width) + 'pc_')
+    convert_to_plt(data_file, proj_metallicity, 'proj', 'metallicity', width, 'Metallicity')
 
 '''
 Visualizing Line Intensities
 '''
 
 # TODO expand to more lines
-def plot_intensities(ds, sp, file, center, width):
+def plot_intensities(ds, sp, data_file, center, width):
     proj_halpha = proj_plot(ds, sp, (width, 'pc'), center, ('gas', 'intensity_H1_6562.80A'), None)
-    proj_halpha.save(str(width) + 'pc_')
-    convert_to_plt(file, proj_halpha, 'proj', 'intensity_H1_6562.80A', width, r'Projected H1 6562.80A Intensity [$erg\: s^{-1}\: cm^{-2}$]')
+    #proj_halpha.save(str(width) + 'pc_')
+    convert_to_plt(data_file, proj_halpha, 'proj', 'intensity_H1_6562.80A', width, r'Projected H1 6562.80A Intensity [$erg\: s^{-1}\: cm^{-2}$]')
 
     proj_halpha.set_width((2000, 'pc'))
-    proj_halpha.save('2000pc_')
-    convert_to_plt(file, proj_halpha, 'proj', 'intensity_H1_6562.80A', 2000, r'Project H1 6562.80A Intensity [$erg\: s^{-1}\: cm^{-2}$]')
+    #proj_halpha.save('2000pc_')
+    convert_to_plt(data_file, proj_halpha, 'proj', 'intensity_H1_6562.80A', 2000, r'Project H1 6562.80A Intensity [$erg\: s^{-1}\: cm^{-2}$]')
 
     proj_halpha_l = proj_plot(ds, sp, (width, 'pc'), center, ('gas', 'luminosity_H1_6562.80A'), None)
-    proj_halpha_l.save(str(width) + 'pc_')
-    convert_to_plt(file, proj_halpha_l, 'proj', 'luminosity_H1_6562.80A', width, r'Projected H1 6562.80A Luminosity [$erg\: s^{-1}$]')
+    #proj_halpha_l.save(str(width) + 'pc_')
+    convert_to_plt(data_file, proj_halpha_l, 'proj', 'luminosity_H1_6562.80A', width, r'Projected H1 6562.80A Luminosity [$erg\: s^{-1}$]')
 
     proj_oiii = proj_plot(ds, sp, (width, 'pc'), center, ('gas', 'intensity_O3_5006.84A'), None)
-    proj_oiii.save(str(width) + 'pc_')
-    convert_to_plt(file, proj_oiii, 'proj', 'intensity_O3_5006.84A', width, r'Projected O3 5006.84A Intensity [$erg\: s^{-1}\: cm^{-2}$]')
+    #proj_oiii.save(str(width) + 'pc_')
+    convert_to_plt(data_file, proj_oiii, 'proj', 'intensity_O3_5006.84A', width, r'Projected O3 5006.84A Intensity [$erg\: s^{-1}\: cm^{-2}$]')
 
     slc_halpha = slc_plot(ds, (width, 'pc'), center, ('gas', 'intensity_H1_6562.80A'))
-    slc_halpha.save(str(width) + 'pc_')
-    convert_to_plt(file, slc_halpha, 'slc', 'intensity_H1_6562.80A', width, r'H1 6562.80A Intensity [$erg\: s^{-1}\: cm^{-2}$]')
+    #slc_halpha.save(str(width) + 'pc_')
+    convert_to_plt(data_file, slc_halpha, 'slc', 'intensity_H1_6562.80A', width, r'H1 6562.80A Intensity [$erg\: s^{-1}\: cm^{-2}$]')
 
 
 '''
 Plot Spectra at simulated wavelengths
 '''
 
-def spectra_driver(ds, ad, data_file):
-    luminosities=[]
-
-    for line in lines:
-        luminosity=ad['gas', 'luminosity_' + line].sum()
-        luminosities.append(luminosity.value)
-
+def spectra_driver(ds, luminosities, data_file):
     z = ds.current_redshift
     omega_matter = ds.omega_matter
     omega_lambda = ds.omega_lambda
@@ -195,17 +190,20 @@ def spectra_driver(ds, ad, data_file):
     # broad line spectra- gas orbiting BH close
     R = 1000
 
-    # TODO filename
-    plot_spectra(wavelengths, luminosities, flux_arr, z, 10e-25, R, fname='output_00273' + '_raw_spectra.png', \
+    directory = data_file + '_analysis'
+
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+    plot_spectra(wavelengths, luminosities, flux_arr, z, 10e-25, R, fname=os.path.join(directory, "raw_spectra.png"), \
              sim_spectra=False, redshift_wavelengths=False)
 
-    plot_spectra(wavelengths, luminosities, flux_arr, z, 10e-25, R, fname='output_00273' + '_sim_spectra.png', \
+    plot_spectra(wavelengths, luminosities, flux_arr, z, 10e-25, R, fname=os.path.join(directory, "sim_spectra.png"), \
              sim_spectra=True, redshift_wavelengths=False)
 
-    plot_spectra(wavelengths, luminosities, flux_arr, z, 10e-25, R, fname='output_00273' + '_sim_spectra_redshifted.png', \
+    plot_spectra(wavelengths, luminosities, flux_arr, z, 10e-25, R, fname=os.path.join(directory, "sim_spectra_redshifted.png"), \
              sim_spectra=True, redshift_wavelengths=True)
     
-
 
 def plot_spectra(wavelengths, luminosities, flux_arr, z, noise_lvl, R, \
                  fname, sim_spectra=False, redshift_wavelengths=False):
@@ -215,6 +213,7 @@ def plot_spectra(wavelengths, luminosities, flux_arr, z, noise_lvl, R, \
     if redshift_wavelengths:
         wavelengths = (1+z)*np.array(wavelengths)
 
+    # TODO calculate line widths before redshifting?
     line_widths = np.array(wavelengths)/R # Angstrom
 
     if sim_spectra:

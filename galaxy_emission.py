@@ -28,10 +28,10 @@ from scipy.special import voigt_profile
 from astropy.cosmology import FlatLambdaCDM
 from matplotlib.colors import LogNorm
 import sys
+import galaxy_visualization
 
 #f1 = "/Users/bnowicki/Documents/Research/Ricotti/output_00273"
 filename = sys.argv[1]
-
 
 # TODO user input which fields to plot, width, etc.
 
@@ -114,261 +114,31 @@ for i in range(len(lines)):
 ds = yt.load(filename)
 ad = ds.all_data()
 
-# For projections in a spherical region
-# TODO generalize center
-#sp = ds.sphere([0.49118094, 0.49275361, 0.49473726], (2000, "pc"))
+sim_run = filename.split('/')[-1]
 
 '''
-Projection, Slice Plot Routines
+Line Luminosities
+'''
+luminosities=[]
 
+for line in lines:
+    luminosity=ad['gas', 'luminosity_' + line].sum()
+    luminosities.append(luminosity.value)
 
-# TODO
-# Locate simulation center as the center of mass
-# of star particles
-#def star_center(ad):
+directory = sim_run + '_analysis'
 
+if not os.path.exists(directory):
+    os.makedirs(directory)
 
-# Projection Plot Driver 
-# Simplify making consistent plots of different fields
-# field specified as a tuple
-# width specified as a tuple wtih number and units, e.g (700, 'pc')
-# Alternatively, can plot width=0.0001 - portion of box in code units
-# weight_field can be specified or None for no weight field
-def proj_plot(ds, sp, width, center, field, weight_field):
-    if weight_field == None:
-        p = yt.ProjectionPlot(ds, "z", field,
-                      width=width,
-                      data_source=sp,
-                      buff_size=(1000, 1000),
-                      center=center)
-    else:
-        p = yt.ProjectionPlot(ds, "z", field,
-                      width=width,
-                      weight_field=weight_field,
-                      data_source=sp,
-                      buff_size=(1000, 1000),
-                      center=center)
-    return p
+# Save the data to the new directory
+file_path = os.path.join(directory, "line_luminosity.txt")
+np.savetxt(file_path, luminosities, delimiter=',')
 
-# Slice Plot Driver
-def slc_plot(ds, width, center, field):
-    slc = yt.SlicePlot(
-                    ds, "z", field,
-                    center=center,
-                    width=width,
-                    buff_size=(1000, 1000))
-
-    return slc
-
-# yt_plot projection or slice plot, field as a string, lbox in pc
-# plot_type = 'slc' or 'proj', data_file - string of input data being read
-# Title String with Units
-def convert_to_plt(data_file, yt_plot, plot_type, field, lbox, title):
-    #fname = str(lbox) + 'pc_' + data_file + '_' + plot_type
-    fname = str(lbox) + 'pc_' + 'output_00273' + '_' + plot_type
-    # TODO fix filename
-
-    plot_frb = yt_plot.frb
-    p_img = np.array(plot_frb['gas', field])
-    extent_dens = [-lbox/2, lbox/2, -lbox/2, lbox/2]
-    dens_norm = LogNorm(np.min(p_img), np.max(p_img))
-    fig = plt.figure()
-    plt.imshow(p_img, norm=dens_norm, extent=extent_dens, origin='lower', aspect='auto')
-    plt.xlabel("X (pc)")
-    plt.ylabel("Y (pc)")
-    plt.title(title)
-    plt.xlim(-lbox/2, lbox/2)
-    plt.ylim(-lbox/2, lbox/2)
-    plt.colorbar()
-    plt.savefig(fname=fname)
-
-    # TODO fix plots, title
-
-
-
-Projection Plots of Ionization Parameter, Number Density, 
-Mass Density, Temperature, Metallicity
-
-
-# Wrapper for making diagnostic plots of given fields
-def plot_diagnostics(ds, sp, file, center, width):
-    # Ionization Parameter
-    proj_ion_param = proj_plot(ds, sp, (width, 'pc'), center, ('gas', 'ion-param'), ('gas', 'number_density'))
-    #proj_ion_param.set_unit(('gas', 'ion-param'), '1')
-    convert_to_plt(file, proj_ion_param, 'proj', 'ion-param', width, 'Ionization Parameter')
-    proj_ion_param.save(str(width) + 'pc_')
-
-    # Number Density
-    proj_num_density = proj_plot(ds, sp, (width, 'pc'), center, ('gas', 'number_density'), ('gas', 'number_density'))
-    proj_num_density.save(str(width) + 'pc')
-    convert_to_plt(file, proj_num_density, 'proj', 'number_density', width, r'Number Density [$cm^{-3}$]')
-
-    # Mass Density
-    proj_density = proj_plot(ds, sp, (width, 'pc'), center, ('gas', 'density'), ('gas', 'number_density'))
-    proj_density.save(str(width) + 'pc_')
-    convert_to_plt(file, proj_density, 'proj', 'density', width, r'Density [$g\: cm^{-3}$]')
-
-    proj_density_wide = proj_plot(ds, sp, (1500, 'pc'), center, ('gas', 'density'), ('gas', 'number_density'))
-    proj_density_wide.save('1500pc_')
-    convert_to_plt(file, proj_density_wide, 'proj', 'density', 1500, r'Density [$g\: cm^{-3}$]')
-
-    # Temperature
-    proj_temp = proj_plot(ds, sp, (width, 'pc'), center, ('gas', 'temperature'), ('gas', 'number_density'))
-    proj_temp.save(str(width) + 'pc_')
-    convert_to_plt(file, proj_temp, 'proj', 'temperature', width, 'Temperature [K]')
-
-    # Metallicity
-    proj_metallicity = proj_plot(ds, sp, (width, 'pc'), center, ('gas', 'metallicity'), ('gas', 'number_density'))
-    proj_metallicity.save(str(width) + 'pc_')
-    convert_to_plt(file, proj_metallicity, 'proj', 'metallicity', width, 'Metallicity')
-
-
-Visualizing Line Intensities
-
-
-# TODO expand to more lines
-def plot_intensities(ds, sp, file, center, width):
-    proj_halpha = proj_plot(ds, sp, (width, 'pc'), center, ('gas', 'intensity_H1_6562.80A'), None)
-    proj_halpha.save(str(width) + 'pc_')
-    convert_to_plt(file, proj_halpha, 'proj', 'intensity_H1_6562.80A', width, r'Projected H1 6562.80A Intensity [$erg\: s^{-1}\: cm^{-2}$]')
-
-    proj_halpha.set_width((2000, 'pc'))
-    proj_halpha.save('2000pc_')
-    convert_to_plt(file, proj_halpha, 'proj', 'intensity_H1_6562.80A', 2000, r'Project H1 6562.80A Intensity [$erg\: s^{-1}\: cm^{-2}$]')
-
-    proj_halpha_l = proj_plot(ds, sp, (width, 'pc'), center, ('gas', 'luminosity_H1_6562.80A'), None)
-    proj_halpha_l.save(str(width) + 'pc_')
-    convert_to_plt(file, proj_halpha_l, 'proj', 'luminosity_H1_6562.80A', width, r'Projected H1 6562.80A Luminosity [$erg\: s^{-1}$]')
-
-    proj_oiii = proj_plot(ds, sp, (width, 'pc'), center, ('gas', 'intensity_O3_5006.84A'), None)
-    proj_oiii.save(str(width) + 'pc_')
-    convert_to_plt(file, proj_oiii, 'proj', 'intensity_O3_5006.84A', width, r'Projected O3 5006.84A Intensity [$erg\: s^{-1}\: cm^{-2}$]')
-
-    slc_halpha = slc_plot(ds, (width, 'pc'), center, ('gas', 'intensity_H1_6562.80A'))
-    slc_halpha.save(str(width) + 'pc_')
-    convert_to_plt(file, slc_halpha, 'slc', 'intensity_H1_6562.80A', width, r'H1 6562.80A Intensity [$erg\: s^{-1}\: cm^{-2}$]')
-
-
-
-Plot Spectra at simulated wavelengths
-
-
-def spectra_driver(ds, ad, data_file):
-    luminosities=[]
-
-    for line in lines:
-        luminosity=ad['gas', 'luminosity_' + line].sum()
-        luminosities.append(luminosity.value)
-
-    z = ds.current_redshift
-    omega_matter = ds.omega_matter
-    omega_lambda = ds.omega_lambda
-    cosmo = FlatLambdaCDM(H0=70, Om0=omega_matter)#, Om0=0.3)
-    d_l = cosmo.luminosity_distance(z)*3.086e24 # convert Mpc to cm
-    flux_arr = luminosities/(4*np.pi*d_l**2)#/100
-    flux_arr = flux_arr.value
-
-    # resolving power
-    # R = lambda/delta_lambda
-    # thermal width - 10km/s
-    # delv = sqrt(avg v^2) = sqrt(kT/mH mu - molecular weight)
-    # not seen - need stronger resolution
-    # Milky Way bulk velocity 200km/s avg v^2 = GMdark matter halo/Rvirial radius
-    # winds - gas inside galaxy
-    # feedback - explosion, gas expelled from galaxy, 1000km/s
-    # broad line spectra- gas orbiting BH close
-    R = 1000
-
-    # TODO filename
-    plot_spectra(wavelengths, luminosities, flux_arr, z, 10e-25, R, fname='output_00273' + '_raw_spectra.png', \
-             sim_spectra=False, redshift_wavelengths=False)
-
-    plot_spectra(wavelengths, luminosities, flux_arr, z, 10e-25, R, fname='output_00273' + '_sim_spectra.png', \
-             sim_spectra=True, redshift_wavelengths=False)
-
-    plot_spectra(wavelengths, luminosities, flux_arr, z, 10e-25, R, fname='output_00273' + '_sim_spectra_redshifted.png', \
-             sim_spectra=True, redshift_wavelengths=True)
-    
-
-
-def plot_spectra(wavelengths, luminosities, flux_arr, z, noise_lvl, R, \
-                 fname, sim_spectra=False, redshift_wavelengths=False):
-
-    # Display spectra at redshifted wavelengths
-    # lambda_obs = (1+z)*lambda_rest
-    if redshift_wavelengths:
-        wavelengths = (1+z)*np.array(wavelengths)
-
-    line_widths = np.array(wavelengths)/R # Angstrom
-
-    if sim_spectra:
-        fig, ax1 = plt.subplots(1)
-
-        #x_range, y_vals_l = plot_voigts(wavelengths, luminosities, line_widths, [0.0]*len(wavelengths), noise_lvl)
-        x_range, y_vals_f = plot_voigts(wavelengths, flux_arr, line_widths, [0.0]*len(wavelengths), noise_lvl)
-        ax1.plot(x_range, np.log10(y_vals_f), color='black')
-        #ax2.plot(x_range, np.log10(y_vals_l))
-        ax1.set_xlabel(r'Wavelength [$\AA$]')
-        ax1.set_ylabel(r'Log(Flux) [$erg\: s^{-1}\: cm^{-2}$]')
-        #ax2.set_ylabel(r'Log(Luminosity) [$erg s^{-1}$]')
-    else:
-        fig, (ax1, ax2) = plt.subplots(2, sharex=True)
-
-        ax1.plot(wavelengths, np.log10(flux_arr), 'o')
-        ax2.plot(wavelengths, np.log10(luminosities), 'o')
-        ax2.set_xlabel(r'Wavelength [$\AA$]')
-        ax1.set_ylabel(r'Log(Flux) [$erg\: s^{-1}\: cm^{-2}$]')
-        ax2.set_ylabel(r'Log(Luminosity) [$erg\: s^{-1}$]')
-
-    plt.savefig(fname)
-
-# Plot voigt profiles for spectral lines over a noise level
-# sigma - stdev of normal dist
-# gamma - FWHM of cauchy dist
-def plot_voigts(centers, amplitudes, sigmas, gammas, noise_lvl):
-
-    x_range = np.linspace(min(centers) - 20, max(centers) + 20, 1000)
-    y_vals = np.zeros_like(x_range)+noise_lvl
-
-    for amp, center, sigma, gamma in zip(amplitudes, centers, sigmas, gammas):
-        if amp > noise_lvl:
-            y_vals += (amp-noise_lvl)*voigt_profile(x_range - center, sigma, gamma)
-
-    return x_range, y_vals
-
-# TODO mult metallicity by 4?
-
-#plot_spectra(wavelengths, luminosities, flux_arr, z, 10e-25, R, fname='raw_spectra.png', \
-#             sim_spectra=False, redshift_wavelengths=False)
-
-#plot_spectra(wavelengths, luminosities, flux_arr, z, 10e-25, R, fname='sim_spectra.png', \
-#             sim_spectra=True, redshift_wavelengths=False)
-
-#plot_spectra(wavelengths, luminosities, flux_arr, z, 10e-25, R, fname='sim_spectra_redshifted.png', \
-#             sim_spectra=True, redshift_wavelengths=True)
-
-#plt.show()
-
-# TODO - intrinsic width of line - temperature, bulk velocity of grid points, sum voigts
-# assuming unresolved - width doesnt matter - R = 1000
-# resolve actual lines - each line contributed mostly by certain cells
-# where most of signal coming from - order cells by luminosity
-# full calculation for brightest
-# or sum cells within temp range - treat all as having same width. bulk velocity problem
-
-# star center of mass
+'''
+Create figures
 '''
 
-
-# 
 def sim_diagnostics(ds, data_file):
-    #ds = yt.load(data_file)
-    #ad = ds.all_data()
-
-    # center derived from max density pixel
-    # Alternatively, use
-    # center=("max", ("gas", "[field]")),
-    # in projection plot
     center_max=[0.49118094, 0.49275361, 0.49473726]
     # TODO star center of mass
     
@@ -376,11 +146,11 @@ def sim_diagnostics(ds, data_file):
     sp = ds.sphere(center_max, (2000, "pc"))
     width = 400
 
-    plot_diagnostics(ds, sp, data_file, center_max, width)
-    plot_intensities(ds, sp, data_file, center_max, width)
-    spectra_driver(ds, ad, data_file)
+    galaxy_visualization.plot_diagnostics(ds, sp, data_file, center_max, width)
+    galaxy_visualization.plot_intensities(ds, sp, data_file, center_max, width)
+    galaxy_visualization.spectra_driver(ds, luminosities, data_file)
 
-sim_diagnostics(ds, filename)
+sim_diagnostics(ds, sim_run)
 
 # TODO cleanup script
 # Shell script to run it on all input files
