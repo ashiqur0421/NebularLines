@@ -125,6 +125,7 @@ for line in lines:
     luminosity=ad['gas', 'luminosity_' + line].sum()
     luminosities.append(luminosity.value)
 
+# TODO save to a CC-Fiducial-Analysis directory
 directory = sim_run + '_analysis'
 
 if not os.path.exists(directory):
