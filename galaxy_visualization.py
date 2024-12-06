@@ -39,6 +39,9 @@ wavelengths=[6562.80, 1304.86, 6300.30, 3728.80, 3726.10, 1660.81, 1666.15, \
              3967.47, 1238.82, 1242.80, 1486.50, 1749.67, 6716.44, 6730.82]
 
 
+# TODO galaxy size, buffer size vs. sphere radius
+# 500 pc
+
 # TODO
 # Locate simulation center as the center of mass
 # of star particles
@@ -204,7 +207,11 @@ def spectra_driver(ds, luminosities, data_file):
     plot_spectra(wavelengths, luminosities, flux_arr, z, 10e-25, R, fname=os.path.join(directory, "sim_spectra_redshifted.png"), \
              sim_spectra=True, redshift_wavelengths=True)
     
-
+# TODO rest frame -> luminosity
+# voigt normalization
+# gaussian 2pi
+# Poisson noise root(counts)
+# floor, noise based on signal - integration time
 def plot_spectra(wavelengths, luminosities, flux_arr, z, noise_lvl, R, \
                  fname, sim_spectra=False, redshift_wavelengths=False):
 
@@ -240,6 +247,7 @@ def plot_spectra(wavelengths, luminosities, flux_arr, z, noise_lvl, R, \
 # Plot voigt profiles for spectral lines over a noise level
 # sigma - stdev of normal dist
 # gamma - FWHM of cauchy dist
+# TODO noiseless profile
 def plot_voigts(centers, amplitudes, sigmas, gammas, noise_lvl):
 
     x_range = np.linspace(min(centers) - 20, max(centers) + 20, 1000)
@@ -247,7 +255,7 @@ def plot_voigts(centers, amplitudes, sigmas, gammas, noise_lvl):
 
     for amp, center, sigma, gamma in zip(amplitudes, centers, sigmas, gammas):
         if amp > noise_lvl:
-            y_vals += (amp-noise_lvl)*voigt_profile(x_range - center, sigma, gamma)
+            y_vals += (amp-noise_lvl)*voigt_profile(x_range - center, sigma, gamma) # - noise after no sub
 
     return x_range, y_vals
 
