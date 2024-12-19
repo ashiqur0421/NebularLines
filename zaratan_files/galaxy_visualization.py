@@ -110,7 +110,8 @@ def convert_to_plt(data_file, yt_plot, plot_type, field, lbox, title):
     extent_dens = [-lbox/2, lbox/2, -lbox/2, lbox/2]
     dens_norm = LogNorm(np.min(p_img), np.max(p_img))
     fig = plt.figure()
-    im = plt.imshow(p_img, norm=dens_norm, extent=extent_dens, origin='lower', aspect='auto')
+    # TODO fix imshow issues
+    im = plt.imshow(p_img, norm=dens_norm, extent=extent_dens, origin='lower', aspect='auto', interpolation='nearest')
     plt.xlabel("X (pc)")
     plt.ylabel("Y (pc)")
     plt.title(title)
