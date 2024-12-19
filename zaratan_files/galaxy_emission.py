@@ -15,18 +15,17 @@ Setup fields in yt
 
 # TODO clean imports (only those necessary for main)
 # importing packages
-#import pandas as pd
 import numpy as np
 import os
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import emission
-import astropy
+#import astropy
 import yt
-from yt.units import dimensions
+#from yt.units import dimensions
 import copy
-from scipy.special import voigt_profile
-from astropy.cosmology import FlatLambdaCDM
-from matplotlib.colors import LogNorm
+#from scipy.special import voigt_profile
+#from astropy.cosmology import FlatLambdaCDM
+#from matplotlib.colors import LogNorm
 import sys
 import galaxy_visualization
 
@@ -34,6 +33,8 @@ import galaxy_visualization
 filename = sys.argv[1]
 
 # TODO user input which fields to plot, width, etc.
+
+# TODO extra particle fields
 
 # Cloudy Grid Run Bounds (log values)
 # Umin, Umax, Ustep: -6.0 1.0 0.5
@@ -155,10 +156,3 @@ def sim_diagnostics(ds, data_file):
     galaxy_visualization.spectra_driver(ds, luminosities, data_file)
 
 sim_diagnostics(ds, sim_run)
-
-# TODO cleanup script
-# Shell script to run it on all input files
-# run in zaratan
-
-# TODO save into a certain file for the dataset
-# TODO save table of luminosities for each line

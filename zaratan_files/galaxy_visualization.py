@@ -102,17 +102,23 @@ def convert_to_plt(data_file, yt_plot, plot_type, field, lbox, title):
 
     plot_frb = yt_plot.frb
     p_img = np.array(plot_frb['gas', field])
+
+    if np.min(p_img) <= 0:
+        print("Warning: Data contains non-positive values. Adjusting for LogNorm.")
+        p_img = np.clip(p_img, a_min=1e-10, a_max=None)  # Clip values below 1e-10 to avoid log of zero
+
     extent_dens = [-lbox/2, lbox/2, -lbox/2, lbox/2]
     dens_norm = LogNorm(np.min(p_img), np.max(p_img))
     fig = plt.figure()
-    plt.imshow(p_img, norm=dens_norm, extent=extent_dens, origin='lower', aspect='auto')
+    im = plt.imshow(p_img, norm=dens_norm, extent=extent_dens, origin='lower', aspect='auto')
     plt.xlabel("X (pc)")
     plt.ylabel("Y (pc)")
     plt.title(title)
     plt.xlim(-lbox/2, lbox/2)
     plt.ylim(-lbox/2, lbox/2)
-    plt.colorbar()
+    plt.colorbar(im)
     plt.savefig(fname=fname)
+    plt.close()
 
 '''
 Projection Plots of Ionization Parameter, Number Density, 
