@@ -9,6 +9,7 @@ Projection, Slice Plot Routines
 '''
 
 # importing packages
+#import pandas as pd
 import numpy as np
 import os
 import matplotlib.pyplot as plt
@@ -39,22 +40,9 @@ wavelengths=[6562.80, 1304.86, 6300.30, 3728.80, 3726.10, 1660.81, 1666.15, \
 
 
 # TODO
-def star_center(ad):
-    #x_pos = np.array(ad["star", "particle_position_x"])
-    #y_pos = np.array(ad["star", "particle_position_y"])
-    #z_pos = np.array(ad["star", "particle_position_z"])
-    pos = np.transpose(np.array(ad['nbody', 'particle_position']))
-    x_pos = pos[0]
-    y_pos = pos[1]
-    z_pos = pos[2]
-    x_center = np.mean(x_pos)
-    y_center = np.mean(y_pos)
-    z_center = np.mean(z_pos)
-    x_pos = x_pos - x_center
-    y_pos = y_pos - y_center
-    z_pos = z_pos - z_center
-    ctr_at_code = np.array([x_center, y_center, z_center])
-    return ctr_at_code
+# Locate simulation center as the center of mass
+# of star particles
+#def star_center(ad):
 
 
 # Projection Plot Driver 
@@ -93,7 +81,7 @@ def slc_plot(ds, width, center, field):
 # plot_type = 'slc' or 'proj', data_file - string of input data being read
 # Title String with Units
 def convert_to_plt(data_file, yt_plot, plot_type, field, lbox, title):
-    directory = 'analysis/' + data_file + '_analysis'
+    directory = data_file + '_analysis'
 
     if not os.path.exists(directory):
         os.makedirs(directory)
@@ -155,23 +143,28 @@ def plot_diagnostics(ds, sp, data_file, center, width):
 Visualizing Line Intensities
 '''
 
+# TODO expand to more lines
 def plot_intensities(ds, sp, data_file, center, width):
-    for line in lines:
-        proj = proj_plot(ds, sp, (width, 'pc'), center, ('gas', 'intensity_' + line), None)
-        convert_to_plt(data_file, proj, 'proj', 'intensity_' + line, width, \
-                       'Projected ' + line + r'Intensity [$erg\: s^{-1}\: cm^{-2}$]')
-
     proj_halpha = proj_plot(ds, sp, (width, 'pc'), center, ('gas', 'intensity_H1_6562.80A'), None)
+    #proj_halpha.save(str(width) + 'pc_')
     convert_to_plt(data_file, proj_halpha, 'proj', 'intensity_H1_6562.80A', width, r'Projected H1 6562.80A Intensity [$erg\: s^{-1}\: cm^{-2}$]')
 
     proj_halpha.set_width((2000, 'pc'))
+    #proj_halpha.save('2000pc_')
     convert_to_plt(data_file, proj_halpha, 'proj', 'intensity_H1_6562.80A', 2000, r'Project H1 6562.80A Intensity [$erg\: s^{-1}\: cm^{-2}$]')
 
     proj_halpha_l = proj_plot(ds, sp, (width, 'pc'), center, ('gas', 'luminosity_H1_6562.80A'), None)
+    #proj_halpha_l.save(str(width) + 'pc_')
     convert_to_plt(data_file, proj_halpha_l, 'proj', 'luminosity_H1_6562.80A', width, r'Projected H1 6562.80A Luminosity [$erg\: s^{-1}$]')
 
+    proj_oiii = proj_plot(ds, sp, (width, 'pc'), center, ('gas', 'intensity_O3_5006.84A'), None)
+    #proj_oiii.save(str(width) + 'pc_')
+    convert_to_plt(data_file, proj_oiii, 'proj', 'intensity_O3_5006.84A', width, r'Projected O3 5006.84A Intensity [$erg\: s^{-1}\: cm^{-2}$]')
+
     slc_halpha = slc_plot(ds, (width, 'pc'), center, ('gas', 'intensity_H1_6562.80A'))
+    #slc_halpha.save(str(width) + 'pc_')
     convert_to_plt(data_file, slc_halpha, 'slc', 'intensity_H1_6562.80A', width, r'H1 6562.80A Intensity [$erg\: s^{-1}\: cm^{-2}$]')
+
 
 '''
 Plot Spectra at simulated wavelengths
@@ -183,14 +176,21 @@ def spectra_driver(ds, luminosities, data_file):
     omega_lambda = ds.omega_lambda
     cosmo = FlatLambdaCDM(H0=70, Om0=omega_matter)#, Om0=0.3)
     d_l = cosmo.luminosity_distance(z)*3.086e24 # convert Mpc to cm
-    flux_arr = luminosities/(4*np.pi*d_l**2)
+    flux_arr = luminosities/(4*np.pi*d_l**2)#/100
     flux_arr = flux_arr.value
 
     # resolving power
     # R = lambda/delta_lambda
+    # thermal width - 10km/s
+    # delv = sqrt(avg v^2) = sqrt(kT/mH mu - molecular weight)
+    # not seen - need stronger resolution
+    # Milky Way bulk velocity 200km/s avg v^2 = GMdark matter halo/Rvirial radius
+    # winds - gas inside galaxy
+    # feedback - explosion, gas expelled from galaxy, 1000km/s
+    # broad line spectra- gas orbiting BH close
     R = 1000
 
-    directory = 'analysis/' + data_file + '_analysis'
+    directory = data_file + '_analysis'
 
     if not os.path.exists(directory):
         os.makedirs(directory)
@@ -213,16 +213,22 @@ def plot_spectra(wavelengths, luminosities, flux_arr, z, noise_lvl, R, \
     if redshift_wavelengths:
         wavelengths = (1+z)*np.array(wavelengths)
 
+    # TODO calculate line widths before redshifting?
     line_widths = np.array(wavelengths)/R # Angstrom
 
     if sim_spectra:
         fig, ax1 = plt.subplots(1)
+
+        #x_range, y_vals_l = plot_voigts(wavelengths, luminosities, line_widths, [0.0]*len(wavelengths), noise_lvl)
         x_range, y_vals_f = plot_voigts(wavelengths, flux_arr, line_widths, [0.0]*len(wavelengths), noise_lvl)
         ax1.plot(x_range, np.log10(y_vals_f), color='black')
+        #ax2.plot(x_range, np.log10(y_vals_l))
         ax1.set_xlabel(r'Wavelength [$\AA$]')
         ax1.set_ylabel(r'Log(Flux) [$erg\: s^{-1}\: cm^{-2}$]')
+        #ax2.set_ylabel(r'Log(Luminosity) [$erg s^{-1}$]')
     else:
         fig, (ax1, ax2) = plt.subplots(2, sharex=True)
+
         ax1.plot(wavelengths, np.log10(flux_arr), 'o')
         ax2.plot(wavelengths, np.log10(luminosities), 'o')
         ax2.set_xlabel(r'Wavelength [$\AA$]')
@@ -234,17 +240,33 @@ def plot_spectra(wavelengths, luminosities, flux_arr, z, noise_lvl, R, \
 # Plot voigt profiles for spectral lines over a noise level
 # sigma - stdev of normal dist
 # gamma - FWHM of cauchy dist
-# TODO noiseless profile, Poisson Noise
 def plot_voigts(centers, amplitudes, sigmas, gammas, noise_lvl):
 
     x_range = np.linspace(min(centers) - 20, max(centers) + 20, 1000)
     y_vals = np.zeros_like(x_range)+noise_lvl
 
     for amp, center, sigma, gamma in zip(amplitudes, centers, sigmas, gammas):
-        y_vals += (amp)*voigt_profile(x_range - center, sigma, gamma)
-        #if amp > noise_lvl:
-            #y_vals += (amp-noise_lvl)*voigt_profile(x_range - center, sigma, gamma) # - noise after no sub
-
-    #y_vals += noise_lvl
+        if amp > noise_lvl:
+            y_vals += (amp-noise_lvl)*voigt_profile(x_range - center, sigma, gamma)
 
     return x_range, y_vals
+
+# TODO mult metallicity by 4?
+
+#plot_spectra(wavelengths, luminosities, flux_arr, z, 10e-25, R, fname='raw_spectra.png', \
+#             sim_spectra=False, redshift_wavelengths=False)
+
+#plot_spectra(wavelengths, luminosities, flux_arr, z, 10e-25, R, fname='sim_spectra.png', \
+#             sim_spectra=True, redshift_wavelengths=False)
+
+#plot_spectra(wavelengths, luminosities, flux_arr, z, 10e-25, R, fname='sim_spectra_redshifted.png', \
+#             sim_spectra=True, redshift_wavelengths=True)
+
+#plt.show()
+
+# TODO - intrinsic width of line - temperature, bulk velocity of grid points, sum voigts
+# assuming unresolved - width doesnt matter - R = 1000
+# resolve actual lines - each line contributed mostly by certain cells
+# where most of signal coming from - order cells by luminosity
+# full calculation for brightest
+# or sum cells within temp range - treat all as having same width. bulk velocity problem

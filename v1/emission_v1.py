@@ -59,6 +59,9 @@ dens_normalized_cub = cub.copy()
 
 for i in np.arange(dimN):
     dens_normalized_cub[:,:,i,:]=dens_normalized_cub[:,:,i,:]/10**(2*logN[i])
+    #for j in np.arange(ncols):
+      #dens_normalized_cub[j,:,i,:]=dens_normalized_cub[j,:,i,:]/10**(2*logN[i])
+      #dens_normalized_cub[j,:,i,:]=dens_normalized_cub[j,:,i,:]
 
 # Density Squared Normalized Interpolators
 dens_normalized_interpolator = [None]*ncols
@@ -106,6 +109,8 @@ def get_line_emission(idx, dens_normalized):
         tup = np.stack((Uadj, Nadj, Tadj), axis=-1)
 
         size  = Nadj.size
+        # Testing with constant U, T -> density variation
+        #tup = np.stack(([0.0]*size, Nadj, [5.0]*size), axis=-1)
 
         # Return interpolated values weighted by metallicity
         # for non-Hydrogen and Helium lines

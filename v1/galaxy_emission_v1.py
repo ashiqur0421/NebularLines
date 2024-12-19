@@ -125,7 +125,8 @@ for line in lines:
     luminosity=ad['gas', 'luminosity_' + line].sum()
     luminosities.append(luminosity.value)
 
-directory = 'analysis/' + sim_run + '_analysis'
+# TODO save to a CC-Fiducial-Analysis directory
+directory = sim_run + '_analysis'
 
 if not os.path.exists(directory):
     os.makedirs(directory)
@@ -140,18 +141,14 @@ Create figures
 
 def sim_diagnostics(ds, data_file):
     center_max=[0.49118094, 0.49275361, 0.49473726]
-    star_ctr=galaxy_visualization.star_center(ad)
-    ctr_den=ad.quantities.max_location(("gas", "number_density"))
-    val, x_pos, y_pos, z_pos = ctr_den
-    ctr = [x_pos.value, y_pos.value, z_pos.value]
     # TODO star center of mass
     
     # For projections in a spherical region
-    sp = ds.sphere(ctr, (2000, "pc"))
-    width = 500
+    sp = ds.sphere(center_max, (2000, "pc"))
+    width = 400
 
-    galaxy_visualization.plot_diagnostics(ds, sp, data_file, ctr, width)
-    galaxy_visualization.plot_intensities(ds, sp, data_file, ctr, width)
+    galaxy_visualization.plot_diagnostics(ds, sp, data_file, center_max, width)
+    galaxy_visualization.plot_intensities(ds, sp, data_file, center_max, width)
     galaxy_visualization.spectra_driver(ds, luminosities, data_file)
 
 sim_diagnostics(ds, sim_run)
