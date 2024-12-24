@@ -128,6 +128,8 @@ def convert_to_plt_2(data_file, yt_plot, plot_type, field, lbox, title, lims=Non
         os.makedirs(directory)
 
     fname = os.path.join(directory, data_file + '_' + str(lbox) + 'pc_' + field.replace('.', ',') + '_' + plot_type)
+    if lims != None:
+        fname = fname + '_lims'
 
     plot_frb = yt_plot.frb
     p_img = np.array(plot_frb['gas', field])
@@ -184,6 +186,8 @@ def convert_to_plt_2(data_file, yt_plot, plot_type, field, lbox, title, lims=Non
 Projection Plots of Ionization Parameter, Number Density, 
 Mass Density, Temperature, Metallicity
 '''
+
+# TODO update convert to plt to do both versions of plots with and without limits
 
 # Wrapper for making diagnostic plots of given fields
 def plot_diagnostics(ds, sp, data_file, center, width, lims_dict=None):

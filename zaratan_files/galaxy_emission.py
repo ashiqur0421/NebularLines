@@ -150,8 +150,10 @@ if not os.path.exists(directory):
     os.makedirs(directory)
 
 # Save the data to the new directory
-file_path = os.path.join(directory, "line_luminosity.txt")
+file_path = os.path.join(directory, sim_run + "_line_luminosity.txt")
 np.savetxt(file_path, luminosities, delimiter=',')
+
+# TODO save mins and max's of fields
 
 '''
 Create figures
@@ -192,6 +194,39 @@ lims_00273 = {
     "S2_6730.82A": [10e-8, 10e-3]
 }
 
+lims_fiducial_00319 = {
+    'Ionization Parameter': [10e-7, 10e0],
+    'Number Density': [10e-3, 10e2],
+    'Mass Density': [10e-27, 10e-20],
+    'Temperature': [10e2, 10e10],
+    'Metallicity': [10e-3, 10e0],
+    "H1_6562.80A": [10e-9, 10e2],
+    "O1_1304.86A": [10e-13, 10e-4],
+    "O1_6300.30A": [10e-12, 10e-3],
+    "O2_3728.80A": [10e-11, 10e-2],
+    "O2_3726.10A": [10e-11, 10e-2],
+    "O3_1660.81A": [10e-12, 10e-3],
+    "O3_1666.15A": [10e-11, 10e-3],
+    "O3_4363.21A": [10e-12, 10e-4],
+    "O3_4958.91A": [10e-11, 10e-3],
+    "O3_5006.84A": [10e-11, 10e-3], 
+    "He2_1640.41A": [10e-9, 10e-4],
+    "C2_1335.66A": [10e-12, 10e-3],
+    "C3_1906.68A": [10e-11, 10e-2],
+    "C3_1908.73A": [10e-10, 10e-3],
+    "C4_1549.00A": [10e-13, 10e-7],
+    "Mg2_2795.53A": [10e-11, 10e-2],
+    "Mg2_2802.71A": [10e-11, 10e-2],
+    "Ne3_3868.76A": [10e-12, 10e-4],
+    "Ne3_3967.47A": [10e-12, 10e-4],
+    "N5_1238.82A": [10e-8, 10e-3],
+    "N5_1242.80A": [10e-9, 10e-4],
+    "N4_1486.50A": [10e-12, 10e-3],
+    "N3_1749.67A": [10e-11, 10e-4],
+    "S2_6716.44A": [10e-11, 10e-3],
+    "S2_6730.82A": [10e-11, 10e-3]
+}
+
 def sim_diagnostics(ds, data_file):
     star_ctr=galaxy_visualization.star_center(ad)
     ctr_den=ad.quantities.max_location(("gas", "number_density"))
@@ -205,8 +240,8 @@ def sim_diagnostics(ds, data_file):
     galaxy_visualization.plot_diagnostics(ds, sp, data_file, star_ctr, width)
     galaxy_visualization.plot_intensities(ds, sp, data_file, star_ctr, width)
 
-    #galaxy_visualization.plot_diagnostics(ds, sp, data_file, star_ctr, width, lims_00273)
-    #galaxy_visualization.plot_intensities(ds, sp, data_file, star_ctr, width, lims_00273)
+    galaxy_visualization.plot_diagnostics(ds, sp, data_file, star_ctr, width, lims_fiducial_00319)
+    galaxy_visualization.plot_intensities(ds, sp, data_file, star_ctr, width, lims_fiducial_00319)
     galaxy_visualization.spectra_driver(ds, luminosities, data_file)
 
 sim_diagnostics(ds, sim_run)
