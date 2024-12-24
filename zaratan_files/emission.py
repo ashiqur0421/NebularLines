@@ -3,7 +3,7 @@ from scipy.interpolate import RegularGridInterpolator
 import copy
 
 # Read line emission data (line list, run params)
-filename='linelist.dat'
+filename='zaratan_files/linelist.dat'
 minU,maxU,stepU,minN,maxN,stepN,minT,maxT,stepT=np.loadtxt(filename,unpack=True,dtype=float, max_rows=1, skiprows=5)
 print(minU,maxU,stepU,minN,maxN,stepN,minT,maxT,stepT)
 

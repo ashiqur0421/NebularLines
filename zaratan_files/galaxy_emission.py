@@ -202,8 +202,11 @@ def sim_diagnostics(ds, data_file):
     sp = ds.sphere(star_ctr, (3000, "pc"))
     width = 1500
 
-    galaxy_visualization.plot_diagnostics(ds, sp, data_file, star_ctr, width, lims_00273)
-    galaxy_visualization.plot_intensities(ds, sp, data_file, star_ctr, width, lims_00273)
+    galaxy_visualization.plot_diagnostics(ds, sp, data_file, star_ctr, width)
+    galaxy_visualization.plot_intensities(ds, sp, data_file, star_ctr, width)
+
+    #galaxy_visualization.plot_diagnostics(ds, sp, data_file, star_ctr, width, lims_00273)
+    #galaxy_visualization.plot_intensities(ds, sp, data_file, star_ctr, width, lims_00273)
     galaxy_visualization.spectra_driver(ds, luminosities, data_file)
 
 sim_diagnostics(ds, sim_run)
