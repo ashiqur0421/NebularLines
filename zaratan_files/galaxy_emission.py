@@ -13,7 +13,6 @@ tables from Cloudy runs.
 Setup fields in yt
 '''
 
-# TODO clean imports (only those necessary for main)
 # importing packages
 import numpy as np
 import os
@@ -34,8 +33,6 @@ filename = sys.argv[1]
 
 # TODO user input which fields to plot, width, etc.
 
-# TODO extra particle fields
-
 # Cloudy Grid Run Bounds (log values)
 # Umin, Umax, Ustep: -6.0 1.0 0.5
 # Nmin, Nmax, Nstep: -1.0 6.0 0.5 
@@ -50,6 +47,28 @@ wavelengths=[6562.80, 1304.86, 6300.30, 3728.80, 3726.10, 1660.81, 1666.15, \
              4363.21, 4958.91, 5006.84, 1640.41, 1335.66, \
              1906.68, 1908.73, 1549.00, 2795.53, 2802.71, 3868.76, \
              3967.47, 1238.82, 1242.80, 1486.50, 1749.67, 6716.44, 6730.82]
+
+'''
+cell_fields = [
+    "Density",
+    "x-velocity",
+    "y-velocity",
+    "z-velocity",
+    "Pressure",
+    "Metallicity",
+    # "dark_matter_density",
+    "xHI",
+    "xHII",
+    "xHeII",
+    "xHeIII",
+]
+'''
+epf = [
+    ("particle_family", "b"),
+    ("particle_tag", "b"),
+    ("particle_birth_epoch", "d"),
+    ("particle_metallicity", "d"),
+]
              
 # Ionization Parameter Field
 # Based on photon densities in bins 2-4
@@ -95,7 +114,6 @@ else:
 # Add intensity and luminosity fields for all lines in the list
 for i in range(len(lines)):
     yt.add_field(
-        #('gas', 'intensity_' + lines[i] + '_[erg_cm^{-2}_s^{-1}]'),
         ('gas', 'intensity_' + lines[i]),
         function=emission.get_line_emission(i, dens_normalized),
         sampling_type='cell',
@@ -112,7 +130,7 @@ for i in range(len(lines)):
     )
 
 # Load Simulation Data
-ds = yt.load(filename)
+ds = yt.load(filename, extra_particle_fields=epf)
 ad = ds.all_data()
 
 sim_run = filename.split('/')[-1]
@@ -139,20 +157,53 @@ np.savetxt(file_path, luminosities, delimiter=',')
 Create figures
 '''
 
+# Dictionary of manual limits for each line for animating
+# galaxies over time slices (fix colorbar limits for visual consistency)
+lims_00273 = {
+    'Ionization Parameter': [10e-7, 10e-1],
+    'Number Density': [10e-2, 10e5],
+    'Mass Density': [10e-26, 10e-19],
+    'Temperature': [10e1, 10e6],
+    'Metallicity': [10e-2, 10e1],
+    "H1_6562.80A": [10e-7, 10e2],
+    "O1_1304.86A": [10e-9, 10e1],
+    "O1_6300.30A": [10e-8, 10e-3],
+    "O2_3728.80A": [10e-7, 10e-2],
+    "O2_3726.10A": [10e-7, 10e-2],
+    "O3_1660.81A": [10e-8, 10e-4],
+    "O3_1666.15A": [10e-8, 10e-3],
+    "O3_4363.21A": [10e-9, 10e-4],
+    "O3_4958.91A": [10e-8, 10e-3],
+    "O3_5006.84A": [10e-8, 10e-3], 
+    "He2_1640.41A": [10e-10, 10e-3],
+    "C2_1335.66A": [10e-8, 10e2],
+    "C3_1906.68A": [10e-7, 10e-2],
+    "C3_1908.73A": [10e-7, 10e-2],
+    "C4_1549.00A": [10e-16, 10e-9],
+    "Mg2_2795.53A": [10e-8, 10e2],
+    "Mg2_2802.71A": [10e-8, 10e2],
+    "Ne3_3868.76A": [10e-9, 10e-4],
+    "Ne3_3967.47A": [10e-9, 10e-5],
+    "N5_1238.82A": [10e-14, 10e-4],
+    "N5_1242.80A": [10e-14, 10e-4],
+    "N4_1486.50A": [10e-10, 10e-4],
+    "N3_1749.67A": [10e-8, 10e-4],
+    "S2_6716.44A": [10e-8, 10e-2],
+    "S2_6730.82A": [10e-8, 10e-3]
+}
+
 def sim_diagnostics(ds, data_file):
-    center_max=[0.49118094, 0.49275361, 0.49473726]
     star_ctr=galaxy_visualization.star_center(ad)
     ctr_den=ad.quantities.max_location(("gas", "number_density"))
     val, x_pos, y_pos, z_pos = ctr_den
     ctr = [x_pos.value, y_pos.value, z_pos.value]
-    # TODO star center of mass
     
     # For projections in a spherical region
-    sp = ds.sphere(ctr, (2000, "pc"))
-    width = 500
+    sp = ds.sphere(star_ctr, (3000, "pc"))
+    width = 1500
 
-    galaxy_visualization.plot_diagnostics(ds, sp, data_file, ctr, width)
-    galaxy_visualization.plot_intensities(ds, sp, data_file, ctr, width)
+    galaxy_visualization.plot_diagnostics(ds, sp, data_file, star_ctr, width, lims_00273)
+    galaxy_visualization.plot_intensities(ds, sp, data_file, star_ctr, width, lims_00273)
     galaxy_visualization.spectra_driver(ds, luminosities, data_file)
 
 sim_diagnostics(ds, sim_run)

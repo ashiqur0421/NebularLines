@@ -21,6 +21,7 @@ from scipy.special import voigt_profile
 from astropy.cosmology import FlatLambdaCDM
 from matplotlib.colors import LogNorm
 import sys
+from scipy.ndimage import gaussian_filter
 
 # Cloudy Grid Run Bounds (log values)
 # Umin, Umax, Ustep: -6.0 1.0 0.5
@@ -38,15 +39,11 @@ wavelengths=[6562.80, 1304.86, 6300.30, 3728.80, 3726.10, 1660.81, 1666.15, \
              3967.47, 1238.82, 1242.80, 1486.50, 1749.67, 6716.44, 6730.82]
 
 
-# TODO
+# Find center of mass of star particles
 def star_center(ad):
-    #x_pos = np.array(ad["star", "particle_position_x"])
-    #y_pos = np.array(ad["star", "particle_position_y"])
-    #z_pos = np.array(ad["star", "particle_position_z"])
-    pos = np.transpose(np.array(ad['nbody', 'particle_position']))
-    x_pos = pos[0]
-    y_pos = pos[1]
-    z_pos = pos[2]
+    x_pos = np.array(ad["star", "particle_position_x"])
+    y_pos = np.array(ad["star", "particle_position_y"])
+    z_pos = np.array(ad["star", "particle_position_z"])
     x_center = np.mean(x_pos)
     y_center = np.mean(y_pos)
     z_center = np.mean(z_pos)
@@ -55,7 +52,6 @@ def star_center(ad):
     z_pos = z_pos - z_center
     ctr_at_code = np.array([x_center, y_center, z_center])
     return ctr_at_code
-
 
 # Projection Plot Driver 
 # Simplify making consistent plots of different fields
@@ -121,64 +117,150 @@ def convert_to_plt(data_file, yt_plot, plot_type, field, lbox, title):
     plt.savefig(fname=fname)
     plt.close()
 
+def convert_to_plt_2(data_file, yt_plot, plot_type, field, lbox, title, lims=None):
+    '''
+    lims = [vmin, vmax] fixed limits on colorbar values for image if desired; else None
+    '''
+
+    directory = 'analysis/' + data_file + '_analysis'
+
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+    fname = os.path.join(directory, data_file + '_' + str(lbox) + 'pc_' + field.replace('.', ',') + '_' + plot_type)
+
+    plot_frb = yt_plot.frb
+    p_img = np.array(plot_frb['gas', field])
+
+    # Clip non-positive values to avoid log of zero or negative numbers
+    if np.min(p_img) <= 0:
+        print("Warning: Data contains non-positive values. Adjusting for LogNorm.")
+        p_img = np.clip(p_img, a_min=1e-10, a_max=None)  # Clip values below 1e-10
+
+    # Optionally smooth the data to reduce checkerboard patterns
+    #p_img = gaussian_filter(p_img, sigma=1)
+
+    # Set the extent of the plot (this assumes 'lbox' is the length of the box in parsecs)
+    extent_dens = [-lbox / 2, lbox / 2, -lbox / 2, lbox / 2]
+
+    # Define the color normalization based on the range of the data
+    if lims == None:
+        dens_norm = LogNorm(vmin=np.min(p_img), vmax=np.max(p_img))
+    else:
+        # Set fixed color normalization limits (vmin and vmax for the colorbar)
+        dens_norm = LogNorm(vmin=lims[0], vmax=lims[1])
+
+    # Create the figure
+    fig = plt.figure(figsize=(8, 6))
+    
+    # Create the image plot
+    im = plt.imshow(p_img, norm=dens_norm, extent=extent_dens, origin='lower', 
+                    aspect='auto', interpolation='bilinear', cmap='viridis')
+    
+    #cmap viridis, inferno, magma
+    
+    # Add labels and title
+    plt.xlabel("X (pc)", fontsize=12)
+    plt.ylabel("Y (pc)", fontsize=12)
+    plt.title(title, fontsize=14)
+    
+    # Set axis limits
+    plt.xlim(-lbox / 2, lbox / 2)
+    plt.ylim(-lbox / 2, lbox / 2)
+
+    # Add color bar
+    cbar = plt.colorbar(im)
+
+    #if lims != None:
+        # Set ticks at the colorbar limits
+        #cbar.set_ticks([lims[0], lims[1]])  
+    #cbar.set_label(field, fontsize=12)
+
+    # Save the figure
+    plt.savefig(fname, dpi=300)
+    plt.close()
+
 '''
 Projection Plots of Ionization Parameter, Number Density, 
 Mass Density, Temperature, Metallicity
 '''
 
 # Wrapper for making diagnostic plots of given fields
-def plot_diagnostics(ds, sp, data_file, center, width):
+def plot_diagnostics(ds, sp, data_file, center, width, lims_dict=None):
     # Ionization Parameter
     proj_ion_param = proj_plot(ds, sp, (width, 'pc'), center, ('gas', 'ion-param'), ('gas', 'number_density'))
     #proj_ion_param.set_unit(('gas', 'ion-param'), '1')
-    convert_to_plt(data_file, proj_ion_param, 'proj', 'ion-param', width, 'Ionization Parameter')
+    if lims_dict == None:
+        convert_to_plt_2(data_file, proj_ion_param, 'proj', 'ion-param', width, 'Ionization Parameter')
+    else:
+        convert_to_plt_2(data_file, proj_ion_param, 'proj', 'ion-param', width, 'Ionization Parameter', lims_dict['Ionization Parameter'])
     #proj_ion_param.save(str(width) + 'pc')
 
     # Number Density
     proj_num_density = proj_plot(ds, sp, (width, 'pc'), center, ('gas', 'number_density'), ('gas', 'number_density'))
     #proj_num_density.save(str(width) + 'pc')
-    convert_to_plt(data_file, proj_num_density, 'proj', 'number_density', width, r'Number Density [$cm^{-3}$]')
+    if lims_dict == None:
+        convert_to_plt_2(data_file, proj_num_density, 'proj', 'number_density', width, r'Number Density [$cm^{-3}$]')
+    else:
+        convert_to_plt_2(data_file, proj_num_density, 'proj', 'number_density', width, r'Number Density [$cm^{-3}$]', lims_dict['Number Density'])
 
     # Mass Density
     proj_density = proj_plot(ds, sp, (width, 'pc'), center, ('gas', 'density'), ('gas', 'number_density'))
     #proj_density.save(str(width) + 'pc')
-    convert_to_plt(data_file, proj_density, 'proj', 'density', width, r'Density [$g\: cm^{-3}$]')
+    if lims_dict == None: 
+        convert_to_plt_2(data_file, proj_density, 'proj', 'density', width, r'Density [$g\: cm^{-3}$]')
+    else:
+        convert_to_plt_2(data_file, proj_density, 'proj', 'density', width, r'Density [$g\: cm^{-3}$]', lims_dict['Mass Density'])
 
-    proj_density_wide = proj_plot(ds, sp, (1500, 'pc'), center, ('gas', 'density'), ('gas', 'number_density'))
+    #proj_density_wide = proj_plot(ds, sp, (1500, 'pc'), center, ('gas', 'density'), ('gas', 'number_density'))
     #proj_density_wide.save('1500pc')
-    convert_to_plt(data_file, proj_density_wide, 'proj', 'density', 1500, r'Density [$g\: cm^{-3}$]')
+    #if lims_dict == None:
+    #    convert_to_plt_2(data_file, proj_density_wide, 'proj', 'density', 1500, r'Density [$g\: cm^{-3}$]')
+    #else:
+    #    convert_to_plt_2(data_file, proj_density_wide, 'proj', 'density', 1500, r'Density [$g\: cm^{-3}$]')
 
     # Temperature
     proj_temp = proj_plot(ds, sp, (width, 'pc'), center, ('gas', 'temperature'), ('gas', 'number_density'))
     #proj_temp.save(str(width) + 'pc')
-    convert_to_plt(data_file, proj_temp, 'proj', 'temperature', width, 'Temperature [K]')
+    if lims_dict == None:
+        convert_to_plt_2(data_file, proj_temp, 'proj', 'temperature', width, 'Temperature [K]')
+    else:
+        convert_to_plt_2(data_file, proj_temp, 'proj', 'temperature', width, 'Temperature [K]', lims_dict['Temperature'])
 
     # Metallicity
     proj_metallicity = proj_plot(ds, sp, (width, 'pc'), center, ('gas', 'metallicity'), ('gas', 'number_density'))
     #proj_metallicity.save(str(width) + 'pc_')
-    convert_to_plt(data_file, proj_metallicity, 'proj', 'metallicity', width, 'Metallicity')
+    if lims_dict == None:
+        convert_to_plt_2(data_file, proj_metallicity, 'proj', 'metallicity', width, 'Metallicity')
+    else:
+        convert_to_plt_2(data_file, proj_metallicity, 'proj', 'metallicity', width, 'Metallicity', lims_dict['Metallicity'])
 
 '''
 Visualizing Line Intensities
 '''
 
-def plot_intensities(ds, sp, data_file, center, width):
+def plot_intensities(ds, sp, data_file, center, width, lims_dict=None):
     for line in lines:
         proj = proj_plot(ds, sp, (width, 'pc'), center, ('gas', 'intensity_' + line), None)
-        convert_to_plt(data_file, proj, 'proj', 'intensity_' + line, width, \
-                       'Projected ' + line + r'Intensity [$erg\: s^{-1}\: cm^{-2}$]')
 
-    proj_halpha = proj_plot(ds, sp, (width, 'pc'), center, ('gas', 'intensity_H1_6562.80A'), None)
-    convert_to_plt(data_file, proj_halpha, 'proj', 'intensity_H1_6562.80A', width, r'Projected H1 6562.80A Intensity [$erg\: s^{-1}\: cm^{-2}$]')
+        if lims_dict == None:
+            convert_to_plt_2(data_file, proj, 'proj', 'intensity_' + line, width, \
+                        'Projected ' + line.replace('_', ' ') + r' Intensity [$erg\: s^{-1}\: cm^{-2}$]')
+        else:
+            convert_to_plt_2(data_file, proj, 'proj', 'intensity_' + line, width, \
+                        'Projected ' + line.replace('_', ' ') + r' Intensity [$erg\: s^{-1}\: cm^{-2}$]', lims_dict[line])
 
-    proj_halpha.set_width((2000, 'pc'))
-    convert_to_plt(data_file, proj_halpha, 'proj', 'intensity_H1_6562.80A', 2000, r'Project H1 6562.80A Intensity [$erg\: s^{-1}\: cm^{-2}$]')
+    #proj_halpha = proj_plot(ds, sp, (width, 'pc'), center, ('gas', 'intensity_H1_6562.80A'), None)
+    #convert_to_plt_2(data_file, proj_halpha, 'proj', 'intensity_H1_6562.80A', width, r'Projected H1 6562.80A Intensity [$erg\: s^{-1}\: cm^{-2}$]')
+
+    #proj_halpha.set_width((2000, 'pc'))
+    #convert_to_plt_2(data_file, proj_halpha, 'proj', 'intensity_H1_6562.80A', 2000, r'Projected H1 6562.80A Intensity [$erg\: s^{-1}\: cm^{-2}$]')
 
     proj_halpha_l = proj_plot(ds, sp, (width, 'pc'), center, ('gas', 'luminosity_H1_6562.80A'), None)
-    convert_to_plt(data_file, proj_halpha_l, 'proj', 'luminosity_H1_6562.80A', width, r'Projected H1 6562.80A Luminosity [$erg\: s^{-1}$]')
+    convert_to_plt_2(data_file, proj_halpha_l, 'proj', 'luminosity_H1_6562.80A', width, r'Projected H1 6562.80A Luminosity [$erg\: s^{-1}$]')
 
     slc_halpha = slc_plot(ds, (width, 'pc'), center, ('gas', 'intensity_H1_6562.80A'))
-    convert_to_plt(data_file, slc_halpha, 'slc', 'intensity_H1_6562.80A', width, r'H1 6562.80A Intensity [$erg\: s^{-1}\: cm^{-2}$]')
+    convert_to_plt_2(data_file, slc_halpha, 'slc', 'intensity_H1_6562.80A', width, r'H1 6562.80A Intensity [$erg\: s^{-1}\: cm^{-2}$]')
 
 '''
 Plot Spectra at simulated wavelengths
@@ -202,32 +284,47 @@ def spectra_driver(ds, luminosities, data_file):
     if not os.path.exists(directory):
         os.makedirs(directory)
 
-    plot_spectra(wavelengths, luminosities, flux_arr, z, 10e-25, R, fname=os.path.join(directory, "raw_spectra.png"), \
+    plot_spectra(wavelengths, luminosities, flux_arr, z, 10e-25, R, fname=os.path.join(directory, data_file + "_raw_spectra"), \
              sim_spectra=False, redshift_wavelengths=False)
 
-    plot_spectra(wavelengths, luminosities, flux_arr, z, 10e-25, R, fname=os.path.join(directory, "sim_spectra.png"), \
+    plot_spectra(wavelengths, luminosities, flux_arr, z, 10e-25, R, fname=os.path.join(directory, data_file + "_sim_spectra"), \
              sim_spectra=True, redshift_wavelengths=False)
 
-    plot_spectra(wavelengths, luminosities, flux_arr, z, 10e-25, R, fname=os.path.join(directory, "sim_spectra_redshifted.png"), \
+    plot_spectra(wavelengths, luminosities, flux_arr, z, 10e-25, R, fname=os.path.join(directory, data_file + "_sim_spectra_redshifted"), \
              sim_spectra=True, redshift_wavelengths=True)
     
 
 def plot_spectra(wavelengths, luminosities, flux_arr, z, noise_lvl, R, \
                  fname, sim_spectra=False, redshift_wavelengths=False):
 
+    pad = 1000
+
     # Display spectra at redshifted wavelengths
     # lambda_obs = (1+z)*lambda_rest
     if redshift_wavelengths:
         wavelengths = (1+z)*np.array(wavelengths)
+        pad = 5000
 
     line_widths = np.array(wavelengths)/R # Angstrom
 
     if sim_spectra:
         fig, ax1 = plt.subplots(1)
-        x_range, y_vals_f = plot_voigts(wavelengths, flux_arr, line_widths, [0.0]*len(wavelengths), noise_lvl)
+        x_range, y_vals_f = plot_voigts(wavelengths, flux_arr, line_widths, [0.0]*len(wavelengths), noise_lvl, pad)
         ax1.plot(x_range, np.log10(y_vals_f), color='black')
         ax1.set_xlabel(r'Wavelength [$\AA$]')
-        ax1.set_ylabel(r'Log(Flux) [$erg\: s^{-1}\: cm^{-2}$]')
+        ax1.set_ylabel(r'Log(Flux) [$erg\: s^{-1}\: cm^{-2}$] \: \AA')
+        plt.savefig(fname)
+        plt.close()
+
+        fig, ax1 = plt.subplots(1)
+        x_range, y_vals_l = plot_voigts(wavelengths, luminosities, line_widths, [0.0]*len(wavelengths), noise_lvl, pad)
+        ax1.plot(x_range, np.log10(y_vals_l), color='black')
+        ax1.set_ylim([32, 44])
+        ax1.set_xlabel(r'Wavelength [$\AA$]')
+        ax1.set_ylabel(r'Log(Luminosity) [$erg\: s^{-1}$]')
+        lum_fname = fname + '_lum'
+        plt.savefig(lum_fname)
+        plt.close()
     else:
         fig, (ax1, ax2) = plt.subplots(2, sharex=True)
         ax1.plot(wavelengths, np.log10(flux_arr), 'o')
@@ -235,16 +332,16 @@ def plot_spectra(wavelengths, luminosities, flux_arr, z, noise_lvl, R, \
         ax2.set_xlabel(r'Wavelength [$\AA$]')
         ax1.set_ylabel(r'Log(Flux) [$erg\: s^{-1}\: cm^{-2}$]')
         ax2.set_ylabel(r'Log(Luminosity) [$erg\: s^{-1}$]')
-
-    plt.savefig(fname)
+        plt.savefig(fname)
+        plt.close()
 
 # Plot voigt profiles for spectral lines over a noise level
 # sigma - stdev of normal dist
 # gamma - FWHM of cauchy dist
 # TODO noiseless profile, Poisson Noise
-def plot_voigts(centers, amplitudes, sigmas, gammas, noise_lvl):
+def plot_voigts(centers, amplitudes, sigmas, gammas, noise_lvl, pad):
 
-    x_range = np.linspace(min(centers) - 20, max(centers) + 20, 1000)
+    x_range = np.linspace(min(centers) - pad, max(centers) + pad, 1000)
     y_vals = np.zeros_like(x_range)+noise_lvl
 
     for amp, center, sigma, gamma in zip(amplitudes, centers, sigmas, gammas):
