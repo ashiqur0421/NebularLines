@@ -2,68 +2,44 @@ import os
 import re
 import ffmpeg
 
-def create_video_from_images(image_folder, output_video, file_pattern, frame_rate=30, resolution=(1920, 1080)):
-    """
-    Creates a video from a sequence of PNG images based on the provided file pattern.
+def make_animation(image_pattern, output_file, framerate=2, resolution=(1920, 1080)):
+    '''
+    Creates video from a sequence of images
+    '''
 
-    :param image_folder: Directory where PNG images are located.
-    :param output_video: Output video file (e.g., 'output_intensity.mp4').
-    :param file_pattern: Pattern used to identify image files for the sequence (e.g., 'intensity', 'density').
-    :param frame_rate: Frame rate for the output video.
-    :param resolution: Resolution for the output video (width, height).
-    """
-
-    # List all PNG files in the directory and filter by the pattern
-    images = [img for img in os.listdir(image_folder) if img.endswith('.png') and file_pattern in img]
-    
-    if not images:
-        raise ValueError(f"No images matching the pattern '{file_pattern}' found in the folder.")
-
-    # Sort images numerically by the index extracted from the filename
-    images.sort(key=lambda x: int(re.search(r'(\d+)', x).group(0)))
-
-    # Build FFmpeg input pattern for images
-    input_pattern = os.path.join(image_folder, f"{file_pattern}%05d.png")  # Assumes image naming like output_00319...
-
-    # Command to convert images to a video
-    ffmpeg.input(input_pattern, framerate=frame_rate).output(
-        output_video,
-        video_bitrate='5000k',
+    (
+        ffmpeg
+        .input(image_pattern, pattern_type='glob', framerate=framerate)
+        .output(output_file, video_bitrate='5000k',
         s=f'{resolution[0]}x{resolution[1]}',  # Set the resolution
-        pix_fmt='yuv420p'  # Ensure compatibility with most players
-    ).run()
+        pix_fmt='yuv420p')  # Ensure compatibility with most players
+        .run()
+    )
 
-    print(f"Video created successfully: {output_video}")
+#create_movies_for_sequences(image_folder, frame_rate, resolution)
 
+lines=["H1_6562.80A","O1_1304.86A","O1_6300.30A","O2_3728.80A","O2_3726.10A","O3_1660.81A",
+       "O3_1666.15A","O3_4363.21A","O3_4958.91A","O3_5006.84A", "He2_1640.41A","C2_1335.66A",
+       "C3_1906.68A","C3_1908.73A","C4_1549.00A","Mg2_2795.53A","Mg2_2802.71A","Ne3_3868.76A",
+       "Ne3_3967.47A","N5_1238.82A","N5_1242.80A","N4_1486.50A","N3_1749.67A","S2_6716.44A","S2_6730.82A"]
 
-def create_movies_for_sequences(image_folder, frame_rate=30, resolution=(1920, 1080)):
-    """
-    Create a separate movie for each unique sequence of images based on their filename patterns.
-    :param image_folder: Directory containing the image sequences.
-    :param frame_rate: Frame rate for the output video.
-    :param resolution: Resolution for the output video (width, height).
-    """
+image_dir = '/Users/bnowicki/Documents/Research/Ricotti/analysis/movie_dir/'
+image_patterns = ['output_*_1500pc_density_proj', 'output_*_1500pc_density_proj_lims',
+                  'output_*_1500pc_ion-param_proj', 'output_*_1500pc_ion-param_proj_lims',
+                  'output_*_1500pc_luminosity_H1_6562,80A_proj', 'output_*_1500pc_intensity_H1_6562,80A_slc',
+                  'output_*_1500pc_metallicity_proj', 'output_*_1500pc_metallicity_proj_lims',
+                  'output_*_1500pc_number_density_proj', 'output_*_1500pc_number_density_proj_lims',
+                  'output_*_1500pc_temperature_proj', 'output_*_1500pc_temperature_proj_lims',
+                  'output_*_raw_spectra',
+                  'output_*_sim_spectra', 'output_*_sim_spectra_lum',
+                  'output_*_sim_spectra_redshifted', 'output_*_sim_spectra_redshifted_lum']
 
-    # Identify unique patterns in the filenames to create separate movies for each type
-    all_images = os.listdir(image_folder)
-    
-    # Use regular expressions to group files by their unique patterns
-    intensity_pattern = "intensity"
-    density_pattern = "density"
-    
-    # Process each pattern separately
-    if any(intensity_pattern in img for img in all_images):
-        print(f"Processing images with pattern '{intensity_pattern}'")
-        create_video_from_images(image_folder, f"intensity_movie.mp4", intensity_pattern, frame_rate, resolution)
-    
-    if any(density_pattern in img for img in all_images):
-        print(f"Processing images with pattern '{density_pattern}'")
-        create_video_from_images(image_folder, f"density_movie.mp4", density_pattern, frame_rate, resolution)
+for line in lines:
+    line_pattern = line.replace('.', ',')
+    pattern =  'output_*_1500pc_intensity_' + line_pattern + '_proj'
+    pattern_lims = 'output_*_1500pc_intensity_' + line_pattern + '_proj_lims'
+    image_patterns.append(pattern)
+    image_patterns.append(pattern_lims)
 
-
-# Example usage:
-image_folder = 'path/to/your/images'
-frame_rate = 30  # 30 frames per second
-resolution = (1920, 1080)  # Resolution of the output video
-
-create_movies_for_sequences(image_folder, frame_rate, resolution)
+for image_pattern in image_patterns:
+    make_animation(image_dir + image_pattern + '.png', image_pattern + '.mp4', framerate=framerate, resolution=resolution)
