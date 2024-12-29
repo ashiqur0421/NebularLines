@@ -30,6 +30,7 @@ import galaxy_visualization
 
 #f1 = "/Users/bnowicki/Documents/Research/Ricotti/output_00273"
 filename = sys.argv[1]
+print(filename)
 
 # TODO user input which fields to plot, width, etc.
 
@@ -132,6 +133,10 @@ for i in range(len(lines)):
 # Load Simulation Data
 ds = yt.load(filename, extra_particle_fields=epf)
 ad = ds.all_data()
+star_ctr=galaxy_visualization.star_center(ad)
+sp = ds.sphere(star_ctr, (3000, "pc"))
+sp_lum = ds.sphere(star_ctr, (10, 'kpc'))
+width = 1500
 
 sim_run = filename.split('/')[-1]
 
@@ -141,7 +146,10 @@ Line Luminosities
 luminosities=[]
 
 for line in lines:
-    luminosity=ad['gas', 'luminosity_' + line].sum()
+    # or total quantity of sp_lum
+    luminosity=sp_lum.quantities.total_quantity(('gas', 'luminosity_' + line))
+    #luminosity=ad['gas', 'luminosity_' + line].sum()
+    print(luminosity)
     luminosities.append(luminosity.value)
 
 directory = 'analysis/' + sim_run + '_analysis'
@@ -227,15 +235,15 @@ lims_fiducial_00319 = {
     "S2_6730.82A": [10e-11, 10e-3]
 }
 
-def sim_diagnostics(ds, data_file):
-    star_ctr=galaxy_visualization.star_center(ad)
-    ctr_den=ad.quantities.max_location(("gas", "number_density"))
-    val, x_pos, y_pos, z_pos = ctr_den
-    ctr = [x_pos.value, y_pos.value, z_pos.value]
+def sim_diagnostics(ds, sp, data_file, width):
+    #star_ctr=galaxy_visualization.star_center(ad)
+    #ctr_den=ad.quantities.max_location(("gas", "number_density"))
+    #val, x_pos, y_pos, z_pos = ctr_den
+    #ctr = [x_pos.value, y_pos.value, z_pos.value]
     
     # For projections in a spherical region
-    sp = ds.sphere(star_ctr, (3000, "pc"))
-    width = 1500
+    #sp = ds.sphere(star_ctr, (3000, "pc"))
+    #width = 1500
 
     galaxy_visualization.plot_diagnostics(ds, sp, data_file, star_ctr, width)
     galaxy_visualization.plot_intensities(ds, sp, data_file, star_ctr, width)
@@ -244,4 +252,4 @@ def sim_diagnostics(ds, data_file):
     galaxy_visualization.plot_intensities(ds, sp, data_file, star_ctr, width, lims_fiducial_00319)
     galaxy_visualization.spectra_driver(ds, luminosities, data_file)
 
-sim_diagnostics(ds, sim_run)
+sim_diagnostics(ds, sp, sim_run, width)
