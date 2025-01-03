@@ -40,13 +40,5 @@ dir_list=$(ls -d $directory/output_*)
 
 # Run the tasks:
 $parallel "$srun python3 $script {}" ::: $dir_list  
-# in this case, we are running a script named runtask, and passing it a single argument
-# {1} is the first argument
-# parallel uses ::: to separate options. Here {1..64} is a shell expansion defining the values for
-#    the first argument, but could be any shell command
-#
-# so parallel will run the runtask script for the numbers 1 through 64, with a max of 40 running 
-#    at any one time
-#
-# as an example, the first job will be run like this:
-#    srun -N1 -n1 --exclusive ./runtask arg1:1
+# in this case, we are running a script and passing it a single argument
+# parallel uses ::: to separate options.
