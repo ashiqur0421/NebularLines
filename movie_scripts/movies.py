@@ -23,7 +23,7 @@ lines=["H1_6562.80A","O1_1304.86A","O1_6300.30A","O2_3728.80A","O2_3726.10A","O3
        "C3_1906.68A","C3_1908.73A","C4_1549.00A","Mg2_2795.53A","Mg2_2802.71A","Ne3_3868.76A",
        "Ne3_3967.47A","N5_1238.82A","N5_1242.80A","N4_1486.50A","N3_1749.67A","S2_6716.44A","S2_6730.82A"]
 
-image_dir = '/Users/bnowicki/Documents/Research/Ricotti/analysis/movie_dir/'
+image_dir = '/Users/bnowicki/Documents/Scratch/movie_dir/'
 image_patterns = ['output_*_1500pc_density_proj', 'output_*_1500pc_density_proj_lims',
                   'output_*_1500pc_ion-param_proj', 'output_*_1500pc_ion-param_proj_lims',
                   'output_*_1500pc_luminosity_H1_6562,80A_proj', 'output_*_1500pc_intensity_H1_6562,80A_slc',
@@ -40,6 +40,9 @@ for line in lines:
     pattern_lims = 'output_*_1500pc_intensity_' + line_pattern + '_proj_lims'
     image_patterns.append(pattern)
     image_patterns.append(pattern_lims)
+
+framerate=10
+resolution=(1440, 1080)
 
 for image_pattern in image_patterns:
     make_animation(image_dir + image_pattern + '.png', image_pattern + '.mp4', framerate=framerate, resolution=resolution)

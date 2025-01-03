@@ -1,8 +1,12 @@
 #!/bin/bash --login
-#SBATCH -n 40                     #Number of processors
-#SBATCH -t 2:00:00               #Max wall time for entire job
+#SBATCH -n 40                     #Number of processors in our pool
+#SBATCH -t 1:00:00               #Max wall time for entire job
+
+#change the partition to compute if running in Swansea
+#SBATCH -p htc                    #Use the High Throughput partition which is intended for serial jobs
 
 module purge
+module load hpcw
 module load parallel
 module load python
 python -m pip install --upgrade pip
@@ -35,11 +39,8 @@ file_format="output_*"
 # Specify the Python script to run
 script="zaratan_files/galaxy_emission.py" 
 
-#file_list="$directory/output_00304 $directory/output_00305"
-dir_list=$(ls -d $directory/output_*)
-
 # Run the tasks:
-$parallel "$srun python3 $script {}" ::: $dir_list  
+$parallel "$srun python3 $script arg1:{1}" ::: {$directory/output_00304, $directory/output_00304}
 # in this case, we are running a script named runtask, and passing it a single argument
 # {1} is the first argument
 # parallel uses ::: to separate options. Here {1..64} is a shell expansion defining the values for
