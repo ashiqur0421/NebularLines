@@ -106,7 +106,6 @@ def convert_to_plt(data_file, yt_plot, plot_type, field, lbox, title):
     extent_dens = [-lbox/2, lbox/2, -lbox/2, lbox/2]
     dens_norm = LogNorm(np.min(p_img), np.max(p_img))
     fig = plt.figure()
-    # TODO fix imshow issues
     im = plt.imshow(p_img, norm=dens_norm, extent=extent_dens, origin='lower', aspect='auto', interpolation='nearest')
     plt.xlabel("X (pc)")
     plt.ylabel("Y (pc)")
@@ -138,9 +137,6 @@ def convert_to_plt_2(data_file, yt_plot, plot_type, field, lbox, redshift, title
     if np.min(p_img) <= 0:
         print("Warning: Data contains non-positive values. Adjusting for LogNorm.")
         p_img = np.clip(p_img, a_min=1e-10, a_max=None)  # Clip values below 1e-10
-
-    # Optionally smooth the data to reduce checkerboard patterns
-    #p_img = gaussian_filter(p_img, sigma=1)
 
     # Set the extent of the plot (this assumes 'lbox' is the length of the box in parsecs)
     extent_dens = [-lbox / 2, lbox / 2, -lbox / 2, lbox / 2]
@@ -174,14 +170,9 @@ def convert_to_plt_2(data_file, yt_plot, plot_type, field, lbox, redshift, title
     cbar = plt.colorbar(im)
 
     # Add redshift
-    plt.text(0.05, 0.05, 'z = ' + str(redshift), color='white', fontsize=9, ha='left', va='bottom', \
+    plt.text(0.05, 0.05, 'z = ' + str(redshift)[:8], color='white', fontsize=9, ha='left', va='bottom', \
              transform=plt.gca().transAxes)
     # TODO font
-
-    #if lims != None:
-        # Set ticks at the colorbar limits
-        #cbar.set_ticks([lims[0], lims[1]])  
-    #cbar.set_label(field, fontsize=12)
 
     # Save the figure
     plt.savefig(fname, dpi=300)
@@ -200,16 +191,13 @@ def plot_diagnostics(ds, sp, data_file, center, width, lims_dict=None):
 
     # Ionization Parameter
     proj_ion_param = proj_plot(ds, sp, (width, 'pc'), center, ('gas', 'ion-param'), ('gas', 'number_density'))
-    #proj_ion_param.set_unit(('gas', 'ion-param'), '1')
     if lims_dict == None:
         convert_to_plt_2(data_file, proj_ion_param, 'proj', 'ion-param', width, redshift, 'Ionization Parameter')
     else:
         convert_to_plt_2(data_file, proj_ion_param, 'proj', 'ion-param', width, redshift, 'Ionization Parameter', lims_dict['Ionization Parameter'])
-    #proj_ion_param.save(str(width) + 'pc')
 
     # Number Density
     proj_num_density = proj_plot(ds, sp, (width, 'pc'), center, ('gas', 'number_density'), ('gas', 'number_density'))
-    #proj_num_density.save(str(width) + 'pc')
     if lims_dict == None:
         convert_to_plt_2(data_file, proj_num_density, 'proj', 'number_density', width, redshift, r'Number Density [$cm^{-3}$]')
     else:
@@ -217,22 +205,13 @@ def plot_diagnostics(ds, sp, data_file, center, width, lims_dict=None):
 
     # Mass Density
     proj_density = proj_plot(ds, sp, (width, 'pc'), center, ('gas', 'density'), ('gas', 'number_density'))
-    #proj_density.save(str(width) + 'pc')
     if lims_dict == None: 
         convert_to_plt_2(data_file, proj_density, 'proj', 'density', width, redshift, r'Density [$g\: cm^{-3}$]')
     else:
         convert_to_plt_2(data_file, proj_density, 'proj', 'density', width, redshift, r'Density [$g\: cm^{-3}$]', lims_dict['Mass Density'])
 
-    #proj_density_wide = proj_plot(ds, sp, (1500, 'pc'), center, ('gas', 'density'), ('gas', 'number_density'))
-    #proj_density_wide.save('1500pc')
-    #if lims_dict == None:
-    #    convert_to_plt_2(data_file, proj_density_wide, 'proj', 'density', 1500, r'Density [$g\: cm^{-3}$]')
-    #else:
-    #    convert_to_plt_2(data_file, proj_density_wide, 'proj', 'density', 1500, r'Density [$g\: cm^{-3}$]')
-
     # Temperature
     proj_temp = proj_plot(ds, sp, (width, 'pc'), center, ('gas', 'temperature'), ('gas', 'number_density'))
-    #proj_temp.save(str(width) + 'pc')
     if lims_dict == None:
         convert_to_plt_2(data_file, proj_temp, 'proj', 'temperature', width, redshift, 'Temperature [K]')
     else:
@@ -240,7 +219,6 @@ def plot_diagnostics(ds, sp, data_file, center, width, lims_dict=None):
 
     # Metallicity
     proj_metallicity = proj_plot(ds, sp, (width, 'pc'), center, ('gas', 'metallicity'), ('gas', 'number_density'))
-    #proj_metallicity.save(str(width) + 'pc_')
     if lims_dict == None:
         convert_to_plt_2(data_file, proj_metallicity, 'proj', 'metallicity', width, redshift, 'Metallicity')
     else:
@@ -263,28 +241,22 @@ def plot_intensities(ds, sp, data_file, center, width, lims_dict=None):
 
         if lims_dict == None:
             convert_to_plt_2(data_file, proj, 'proj', 'intensity_' + line, width, redshift, \
-                        'Projected ' + line_title.replace('_', ' ') + r' Intensity [$erg\: s^{-1}\: cm^{-2}$]')
+                        'Projected ' + line_title.replace('_', ' ') + r' Flux [$erg\: s^{-1}\: cm^{-2}$]')
         else:
             convert_to_plt_2(data_file, proj, 'proj', 'intensity_' + line, width, redshift, \
-                        'Projected ' + line_title.replace('_', ' ') + r' Intensity [$erg\: s^{-1}\: cm^{-2}$]', lims_dict[line])
-
-    #proj_halpha = proj_plot(ds, sp, (width, 'pc'), center, ('gas', 'intensity_H1_6562.80A'), None)
-    #convert_to_plt_2(data_file, proj_halpha, 'proj', 'intensity_H1_6562.80A', width, r'Projected H1 6562.80A Intensity [$erg\: s^{-1}\: cm^{-2}$]')
-
-    #proj_halpha.set_width((2000, 'pc'))
-    #convert_to_plt_2(data_file, proj_halpha, 'proj', 'intensity_H1_6562.80A', 2000, r'Projected H1 6562.80A Intensity [$erg\: s^{-1}\: cm^{-2}$]')
+                        'Projected ' + line_title.replace('_', ' ') + r' Flux [$erg\: s^{-1}\: cm^{-2}$]', lims_dict[line])
 
     proj_halpha_l = proj_plot(ds, sp, (width, 'pc'), center, ('gas', 'luminosity_H1_6562.80A'), None)
     convert_to_plt_2(data_file, proj_halpha_l, 'proj', 'luminosity_H1_6562.80A', width, redshift, r'Projected H$\alpha$ 6562.80A Luminosity [$erg\: s^{-1}$]')
 
     slc_halpha = slc_plot(ds, (width, 'pc'), center, ('gas', 'intensity_H1_6562.80A'))
-    convert_to_plt_2(data_file, slc_halpha, 'slc', 'intensity_H1_6562.80A', width, redshift, r'H$\alpha$ 6562.80A Intensity [$erg\: s^{-1}\: cm^{-2}$]')
+    convert_to_plt_2(data_file, slc_halpha, 'slc', 'intensity_H1_6562.80A', width, redshift, r'H$\alpha$ 6562.80A Flux [$erg\: s^{-1}\: cm^{-2}$]')
 
 '''
 Plot Spectra at simulated wavelengths
 '''
 
-def spectra_driver(ds, luminosities, data_file):
+def spectra_driver(ds, luminosities, data_file, linear=False):
     z = ds.current_redshift
     omega_matter = ds.omega_matter
     omega_lambda = ds.omega_lambda
@@ -302,18 +274,40 @@ def spectra_driver(ds, luminosities, data_file):
     if not os.path.exists(directory):
         os.makedirs(directory)
 
+    # Raw spectra values
     plot_spectra(wavelengths, luminosities, flux_arr, z, 10e-25, R, fname=os.path.join(directory, data_file + "_raw_spectra"), \
              sim_spectra=False, redshift_wavelengths=False)
 
+    # Sim spectra, not redshifted
     plot_spectra(wavelengths, luminosities, flux_arr, z, 10e-25, R, fname=os.path.join(directory, data_file + "_sim_spectra"), \
              sim_spectra=True, redshift_wavelengths=False)
 
+    # Sim spectra, redshifted
     plot_spectra(wavelengths, luminosities, flux_arr, z, 10e-25, R, fname=os.path.join(directory, data_file + "_sim_spectra_redshifted"), \
              sim_spectra=True, redshift_wavelengths=True)
     
+    # With Limits for animation
+    # Sim spectra, not redshifted
+    plot_spectra(wavelengths, luminosities, flux_arr, z, 10e-25, R, fname=os.path.join(directory, data_file + "_sim_spectra_lims"), \
+             sim_spectra=True, redshift_wavelengths=False, lum_lims=[32, 44], flux_lims=[-24, -19])
+
+    # Sim spectra, redshifted
+    plot_spectra(wavelengths, luminosities, flux_arr, z, 10e-25, R, fname=os.path.join(directory, data_file + "_sim_spectra_redshifted_lims"), \
+             sim_spectra=True, redshift_wavelengths=True, lum_lims=[32, 44], flux_lims=[-24, -19])
+    
+    # Linear Scale
+    # Sim spectra, not redshifted
+    #plot_spectra(wavelengths, luminosities, flux_arr, z, 10e-25, R, fname=os.path.join(directory, data_file + "_sim_spectra_lims_linear"), \
+    #         sim_spectra=True, redshift_wavelengths=False, lum_lims=[32, 38], flux_lims=[-24, -20], linear=True)
+
+    # Sim spectra, redshifted
+    #plot_spectra(wavelengths, luminosities, flux_arr, z, 10e-25, R, fname=os.path.join(directory, data_file + "_sim_spectra_redshifted_lims_linear"), \
+    #         sim_spectra=True, redshift_wavelengths=True, lum_lims=[32, 38], flux_lims=[-24, -20], linear=True)
+
+    
 
 def plot_spectra(wavelengths, luminosities, flux_arr, z, noise_lvl, R, \
-                 fname, sim_spectra=False, redshift_wavelengths=False):
+                 fname, sim_spectra=False, redshift_wavelengths=False, lum_lims=None, flux_lims=None, linear=False):
 
     pad = 1000
 
@@ -328,18 +322,39 @@ def plot_spectra(wavelengths, luminosities, flux_arr, z, noise_lvl, R, \
     if sim_spectra:
         fig, ax1 = plt.subplots(1)
         x_range, y_vals_f = plot_voigts(wavelengths, flux_arr, line_widths, [0.0]*len(wavelengths), noise_lvl, pad)
-        ax1.plot(x_range, np.log10(y_vals_f), color='black')
+        if linear == False:
+            ax1.plot(x_range, np.log10(y_vals_f), color='black')
+        else:
+            ax1.plot(x_range, y_vals_f, color='black')
+        if flux_lims != None:
+            if linear == False:
+                ax1.set_ylim(flux_lims)
+            else:
+                ax1.set_ylim([10**flux_lims[0], 10**flux_lims[1]])
         ax1.set_xlabel(r'Wavelength [$\AA$]')
-        ax1.set_ylabel(r'Log(Flux) [$erg\: s^{-1}\: cm^{-2} \: \AA^{-1}]$')
+        if linear == False:
+            ax1.set_ylabel(r'Log(Flux) [$erg\: s^{-1}\: cm^{-2} \: \AA^{-1}]$')
+        else:
+            ax1.set_ylabel(r'Flux [$erg\: s^{-1}\: cm^{-2} \: \AA^{-1}]$')
         plt.savefig(fname)
         plt.close()
 
         fig, ax1 = plt.subplots(1)
         x_range, y_vals_l = plot_voigts(wavelengths, luminosities, line_widths, [0.0]*len(wavelengths), noise_lvl, pad)
-        ax1.plot(x_range, np.log10(y_vals_l), color='black')
-        ax1.set_ylim([32, 44])
+        if linear == False:
+            ax1.plot(x_range, np.log10(y_vals_l), color='black')
+        else:
+            ax1.plot(x_range, y_vals_l, color='black')
+        if lum_lims != None:
+            if linear == False:
+                ax1.set_ylim(lum_lims)
+            else:
+                ax1.set_ylim([10**lum_lims[0], 10**lum_lims[1]])
         ax1.set_xlabel(r'Wavelength [$\AA$]')
-        ax1.set_ylabel(r'Log(Luminosity) [$erg\: s^{-1}]$')
+        if linear == False:
+            ax1.set_ylabel(r'Log(Luminosity) [$erg\: s^{-1} \: \AA^{-1}]$')
+        else:
+            ax1.set_ylabel(r'Luminosity [$erg\: s^{-1} \: \AA^{-1}]$')
         lum_fname = fname + '_lum'
         plt.savefig(lum_fname)
         plt.close()
@@ -370,3 +385,95 @@ def plot_voigts(centers, amplitudes, sigmas, gammas, noise_lvl, pad):
     #y_vals += noise_lvl
 
     return x_range, y_vals
+
+
+'''
+Star + Gas Plot
+Adapted from work by Sarunyapat Phoompuang
+'''
+
+def star_gas_overlay(ds, ad, sp, data_file, center, width, field, lims_dict=None):
+    lims = lims_dict["H1_6562.80A"] # TODO
+
+    directory = 'analysis/' + data_file + '_analysis'
+
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+    fname = os.path.join(directory, str(width) + 'pc_stellar_dist')
+
+    # Finding center of the data
+    x_pos = np.array(ad["star", "particle_position_x"])
+    y_pos = np.array(ad["star", "particle_position_y"])
+    z_pos = np.array(ad["star", "particle_position_z"])
+    x_center = np.mean(x_pos)
+    y_center = np.mean(y_pos)
+    z_center = np.mean(z_pos)
+    x_pos = x_pos - x_center
+    y_pos = y_pos - y_center
+    z_pos = z_pos - z_center
+
+    # Create a ProjectionPlot
+    p = proj_plot(ds, sp, (width, 'pc'), center, ('gas', 'intensity_H1_6562.80A'), None)
+    p_frb = p.frb  # Fixed-Resolution Buffer from the projection
+    p_img = np.array(p_frb["gas", 'intensity_H1_6562.80A'])
+    star_bins = 2000
+    star_mass = np.ones_like(x_pos) * 10
+    pop2_xyz = np.array(ds.arr(np.vstack([x_pos, y_pos, z_pos]), "code_length").to("pc")).T
+    extent_dens = [-width/2, width/2, -width/2, width/2]
+    #gas_range = (20, 2e4)
+    norm1 = LogNorm(vmin=lims[0], vmax=lims[1])
+    #norm1 = LogNorm(vmin = gas_range[0], vmax = gas_range[1])
+    #plt.figure(figsize = (12,8))
+    #plt.imshow(p_img, norm = norm1, extent = extent_dens, origin = 'lower', aspect = 'auto', cmap = 'inferno')
+    #plt.colorbar(label = r"Number Density [1/cm$^3$]")
+    # plt.scatter(pop2_xyz[:, 0], pop2_xyz[:, 1], s = 5, marker = '.', color = 'red')
+    #plt.xlabel("X (pc)")
+    #plt.ylabel("Y (pc)")
+    #plt.title("Gas Density and Particle Positions")
+    #plt.xlim(-width/2, width/2)
+    #plt.ylim(-width/2, width/2)
+    #plt.show()
+	
+    stellar_mass_dens, _, _ = np.histogram2d(pop2_xyz[:, 0],
+                                             pop2_xyz[:, 1],
+                                             bins = star_bins,
+                                             weights = star_mass,
+                                             range = [[-width / 2, width / 2],
+                                                      [-width / 2, width / 2],
+                                                     ],
+    )
+    stellar_mass_dens = stellar_mass_dens.T
+    stellar_mass_dens = np.where(stellar_mass_dens <= 1, 0, stellar_mass_dens)
+    stellar_range = [1, 1200]
+    norm2 = LogNorm(vmin = stellar_range[0], vmax = stellar_range[1])
+    plt.figure(figsize = (12, 8))
+    lumcmap = "cmr.amethyst"
+    plt.imshow(stellar_mass_dens, norm = norm2, extent = extent_dens, origin = 'lower', aspect = 'auto', cmap = 'winter_r')
+    plt.colorbar(label = "Stellar Mass Density")
+    plt.xlabel("X (pc)")
+    plt.ylabel("Y (pc)")
+    plt.title("Stellar Mass Density Distribution")
+    plt.savefig(fname=fname)
+    	
+    #print(np.min(p_img), np.max(p_img))  # Check for min/max values of p_img
+    #print(np.min(stellar_mass_dens), np.max(stellar_mass_dens))  # Check for min/max values of stellar_mass_dens
+
+    overlay_fname = fname + '_H1' #+ field
+    fig, ax = plt.subplots(figsize = (12, 8))
+    alpha_star = stellar_mass_dens
+    alpha_star = np.where(stellar_mass_dens <= 1, 0.0, 1)
+    img1 = ax.imshow(p_img, norm = norm1, extent = extent_dens, origin = 'lower', aspect = 'auto', cmap = 'inferno', alpha = 1)
+    cbar1 = fig.colorbar(img1, ax = ax, orientation = 'vertical', pad = 0.02)
+    cbar1.set_label('Projected ' + r'H$\alpha$ Flux [$erg\: s^{-1}\: cm^{-2}$]') # TODO
+    img2 = ax.imshow(stellar_mass_dens, norm = norm2, extent = extent_dens, origin = 'lower', aspect = 'auto', cmap = 'winter_r', alpha = alpha_star)
+    cbar2 = fig.colorbar(img2, ax = ax, orientation = 'vertical', pad = 0.02)
+    cbar2.set_label("Stellar Mass Density")
+    # ax.scatter(pop2_xyz[:, 0], pop2_xyz[:, 1], s=5, marker='.', color='black')
+    ax.set_xlabel("X (pc)")
+    ax.set_ylabel("Y (pc)")
+    ax.set_title(r'H$\alpha$ Flux' + ' and Stellar Mass Density Distribution')
+    ax.set_xlim(-width / 2, width / 2)
+    ax.set_ylim(-width / 2, width / 2)
+    plt.savefig(fname=overlay_fname)
+    plt.close()

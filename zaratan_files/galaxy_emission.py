@@ -16,23 +16,15 @@ Setup fields in yt
 # importing packages
 import numpy as np
 import os
-#import matplotlib.pyplot as plt
 import emission
-#import astropy
 import yt
-#from yt.units import dimensions
 import copy
-#from scipy.special import voigt_profile
-#from astropy.cosmology import FlatLambdaCDM
-#from matplotlib.colors import LogNorm
 import sys
 import galaxy_visualization
 
 #f1 = "/Users/bnowicki/Documents/Research/Ricotti/output_00273"
 filename = sys.argv[1]
 print(filename)
-
-# TODO user input which fields to plot, width, etc.
 
 # Cloudy Grid Run Bounds (log values)
 # Umin, Umax, Ustep: -6.0 1.0 0.5
@@ -146,9 +138,7 @@ Line Luminosities
 luminosities=[]
 
 for line in lines:
-    # or total quantity of sp_lum
     luminosity=sp_lum.quantities.total_quantity(('gas', 'luminosity_' + line))
-    #luminosity=ad['gas', 'luminosity_' + line].sum()
     print(luminosity)
     luminosities.append(luminosity.value)
 
@@ -236,20 +226,15 @@ lims_fiducial_00319 = {
 }
 
 def sim_diagnostics(ds, sp, data_file, width):
-    #star_ctr=galaxy_visualization.star_center(ad)
-    #ctr_den=ad.quantities.max_location(("gas", "number_density"))
-    #val, x_pos, y_pos, z_pos = ctr_den
-    #ctr = [x_pos.value, y_pos.value, z_pos.value]
     
-    # For projections in a spherical region
-    #sp = ds.sphere(star_ctr, (3000, "pc"))
-    #width = 1500
-
     galaxy_visualization.plot_diagnostics(ds, sp, data_file, star_ctr, width)
     galaxy_visualization.plot_intensities(ds, sp, data_file, star_ctr, width)
 
-    galaxy_visualization.plot_diagnostics(ds, sp, data_file, star_ctr, width, lims_fiducial_00319)
-    galaxy_visualization.plot_intensities(ds, sp, data_file, star_ctr, width, lims_fiducial_00319)
+    galaxy_visualization.plot_diagnostics(ds, sp, data_file, star_ctr, width, lims_dict=lims_00273)
+    galaxy_visualization.plot_intensities(ds, sp, data_file, star_ctr, width, lims_dict=lims_00273)
     galaxy_visualization.spectra_driver(ds, luminosities, data_file)
+    
+    
+    galaxy_visualization.star_gas_overlay(ds, ad, sp, data_file, star_ctr, width, 'intensity_H1_6562.80A', lims_dict=lims_00273)
 
 sim_diagnostics(ds, sp, sim_run, width)
