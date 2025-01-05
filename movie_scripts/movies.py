@@ -28,7 +28,7 @@ lines=["H1_6562.80A","O1_1304.86A","O1_6300.30A","O2_3728.80A","O2_3726.10A","O3
        "C3_1906.68A","C3_1908.73A","C4_1549.00A","Mg2_2795.53A","Mg2_2802.71A","Ne3_3868.76A",
        "Ne3_3967.47A","N5_1238.82A","N5_1242.80A","N4_1486.50A","N3_1749.67A","S2_6716.44A","S2_6730.82A"]
 
-image_dir = '/Users/bnowicki/Documents/Scratch/movie_dir_stellar_dist/'
+image_dir = '/Users/bnowicki/Documents/Scratch/movie_dir_2/'
 image_patterns = ['output_*_1500pc_density_proj', 'output_*_1500pc_density_proj_lims',
                   'output_*_1500pc_ion-param_proj', 'output_*_1500pc_ion-param_proj_lims',
                   'output_*_1500pc_luminosity_H1_6562,80A_proj', 'output_*_1500pc_intensity_H1_6562,80A_slc',
@@ -38,6 +38,8 @@ image_patterns = ['output_*_1500pc_density_proj', 'output_*_1500pc_density_proj_
                   'output_*_raw_spectra',
                   'output_*_sim_spectra', 'output_*_sim_spectra_lum',
                   'output_*_sim_spectra_redshifted', 'output_*_sim_spectra_redshifted_lum',
+                  'output_*_sim_spectra_lims_lum', 'output_*_sim_spectra_lims',
+                  'output_*_sim_spectra_redshifted_lims', 'output_*_sim_spectra_redshifted_lims_lum',
                   'output_*_1500pc_stellar_dist', 'output_*_1500pc_stellar_dist_H1']
 
 for line in lines:
@@ -50,7 +52,10 @@ for line in lines:
 framerate=10
 resolution=(1440, 1080)
 
-for image_pattern in image_patterns:
+image_patterns_2 = ['output_*_sim_spectra_lims_lum', 'output_*_sim_spectra_lims',
+                  'output_*_sim_spectra_redshifted_lims', 'output_*_sim_spectra_redshifted_lims_lum']
+
+for image_pattern in image_patterns_2:
     if check_file_pattern(image_dir, image_pattern + '.png'):
         make_animation(image_dir + image_pattern + '.png', image_pattern + '.mp4', framerate=framerate, resolution=resolution)
     else:

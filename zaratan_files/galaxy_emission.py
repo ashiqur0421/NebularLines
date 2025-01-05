@@ -234,7 +234,6 @@ def sim_diagnostics(ds, sp, data_file, width):
     #galaxy_visualization.plot_intensities(ds, sp, data_file, star_ctr, width, lims_dict=lims_00273)
     #galaxy_visualization.spectra_driver(ds, luminosities, data_file)
     
-    
     galaxy_visualization.star_gas_overlay(ds, ad, sp, data_file, star_ctr, width, 'intensity_H1_6562.80A', lims_dict=lims_00273)
 
 sim_diagnostics(ds, sp, sim_run, width)

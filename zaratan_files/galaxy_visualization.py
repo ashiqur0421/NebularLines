@@ -170,7 +170,7 @@ def convert_to_plt_2(data_file, yt_plot, plot_type, field, lbox, redshift, title
     cbar = plt.colorbar(im)
 
     # Add redshift
-    plt.text(0.05, 0.05, 'z = ' + str(redshift)[:8], color='white', fontsize=9, ha='left', va='bottom', \
+    plt.text(0.05, 0.05, f'z = {redshift:.5f}', color='white', fontsize=9, ha='left', va='bottom', \
              transform=plt.gca().transAxes)
     # TODO font
 
@@ -489,7 +489,7 @@ def star_gas_overlay(ds, ad, sp, data_file, center, width, field, lims_dict=None
     ax.set_xlim(-width / 2, width / 2)
     ax.set_ylim(-width / 2, width / 2)
 
-    plt.text(0.05, 0.05, 'z = ' + str(redshift)[:8], color='white', fontsize=9, ha='left', va='bottom', \
+    plt.text(0.05, 0.05, f'z = {redshift:.4f}', color='white', fontsize=9, ha='left', va='bottom', \
              transform=plt.gca().transAxes)
 
     plt.savefig(fname=overlay_fname)
