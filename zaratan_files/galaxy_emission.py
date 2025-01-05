@@ -137,10 +137,10 @@ Line Luminosities
 '''
 luminosities=[]
 
-for line in lines:
-    luminosity=sp_lum.quantities.total_quantity(('gas', 'luminosity_' + line))
-    print(luminosity)
-    luminosities.append(luminosity.value)
+#for line in lines:
+#    luminosity=sp_lum.quantities.total_quantity(('gas', 'luminosity_' + line))
+#    print(luminosity)
+#    luminosities.append(luminosity.value)
 
 directory = 'analysis/' + sim_run + '_analysis'
 
@@ -148,8 +148,8 @@ if not os.path.exists(directory):
     os.makedirs(directory)
 
 # Save the data to the new directory
-file_path = os.path.join(directory, sim_run + "_line_luminosity.txt")
-np.savetxt(file_path, luminosities, delimiter=',')
+#file_path = os.path.join(directory, sim_run + "_line_luminosity.txt")
+#np.savetxt(file_path, luminosities, delimiter=',')
 
 # TODO save mins and max's of fields
 
@@ -227,12 +227,12 @@ lims_fiducial_00319 = {
 
 def sim_diagnostics(ds, sp, data_file, width):
     
-    galaxy_visualization.plot_diagnostics(ds, sp, data_file, star_ctr, width)
-    galaxy_visualization.plot_intensities(ds, sp, data_file, star_ctr, width)
+    #galaxy_visualization.plot_diagnostics(ds, sp, data_file, star_ctr, width)
+    #galaxy_visualization.plot_intensities(ds, sp, data_file, star_ctr, width)
 
-    galaxy_visualization.plot_diagnostics(ds, sp, data_file, star_ctr, width, lims_dict=lims_00273)
-    galaxy_visualization.plot_intensities(ds, sp, data_file, star_ctr, width, lims_dict=lims_00273)
-    galaxy_visualization.spectra_driver(ds, luminosities, data_file)
+    #galaxy_visualization.plot_diagnostics(ds, sp, data_file, star_ctr, width, lims_dict=lims_00273)
+    #galaxy_visualization.plot_intensities(ds, sp, data_file, star_ctr, width, lims_dict=lims_00273)
+    #galaxy_visualization.spectra_driver(ds, luminosities, data_file)
     
     
     galaxy_visualization.star_gas_overlay(ds, ad, sp, data_file, star_ctr, width, 'intensity_H1_6562.80A', lims_dict=lims_00273)

@@ -393,6 +393,8 @@ Adapted from work by Sarunyapat Phoompuang
 '''
 
 def star_gas_overlay(ds, ad, sp, data_file, center, width, field, lims_dict=None):
+    redshift = ds.current_redshift
+
     lims = lims_dict["H1_6562.80A"] # TODO
 
     directory = 'analysis/' + data_file + '_analysis'
@@ -400,7 +402,7 @@ def star_gas_overlay(ds, ad, sp, data_file, center, width, field, lims_dict=None
     if not os.path.exists(directory):
         os.makedirs(directory)
 
-    fname = os.path.join(directory, str(width) + 'pc_stellar_dist')
+    fname = os.path.join(directory, data_file + '_' + str(width) + 'pc_stellar_dist')
 
     # Finding center of the data
     x_pos = np.array(ad["star", "particle_position_x"])
@@ -414,7 +416,13 @@ def star_gas_overlay(ds, ad, sp, data_file, center, width, field, lims_dict=None
     z_pos = z_pos - z_center
 
     # Create a ProjectionPlot
-    p = proj_plot(ds, sp, (width, 'pc'), center, ('gas', 'intensity_H1_6562.80A'), None)
+    #p = proj_plot(ds, sp, (width, 'pc'), center, ('gas', 'intensity_H1_6562.80A'), None)
+    p = yt.ProjectionPlot(ds, "z", field,
+                      width=(width, 'pc'),
+                      data_source=sp,
+                      buff_size=(2000, 2000),
+                      center=center)
+
     p_frb = p.frb  # Fixed-Resolution Buffer from the projection
     p_img = np.array(p_frb["gas", 'intensity_H1_6562.80A'])
     star_bins = 2000
@@ -455,6 +463,7 @@ def star_gas_overlay(ds, ad, sp, data_file, center, width, field, lims_dict=None
     plt.ylabel("Y (pc)")
     plt.title("Stellar Mass Density Distribution")
     plt.savefig(fname=fname)
+    plt.close()
     	
     #print(np.min(p_img), np.max(p_img))  # Check for min/max values of p_img
     #print(np.min(stellar_mass_dens), np.max(stellar_mass_dens))  # Check for min/max values of stellar_mass_dens
@@ -463,6 +472,10 @@ def star_gas_overlay(ds, ad, sp, data_file, center, width, field, lims_dict=None
     fig, ax = plt.subplots(figsize = (12, 8))
     alpha_star = stellar_mass_dens
     alpha_star = np.where(stellar_mass_dens <= 1, 0.0, 1)
+
+    print(alpha_star.shape)
+    print(p_img.shape)
+
     img1 = ax.imshow(p_img, norm = norm1, extent = extent_dens, origin = 'lower', aspect = 'auto', cmap = 'inferno', alpha = 1)
     cbar1 = fig.colorbar(img1, ax = ax, orientation = 'vertical', pad = 0.02)
     cbar1.set_label('Projected ' + r'H$\alpha$ Flux [$erg\: s^{-1}\: cm^{-2}$]') # TODO
@@ -475,5 +488,9 @@ def star_gas_overlay(ds, ad, sp, data_file, center, width, field, lims_dict=None
     ax.set_title(r'H$\alpha$ Flux' + ' and Stellar Mass Density Distribution')
     ax.set_xlim(-width / 2, width / 2)
     ax.set_ylim(-width / 2, width / 2)
+
+    plt.text(0.05, 0.05, 'z = ' + str(redshift)[:8], color='white', fontsize=9, ha='left', va='bottom', \
+             transform=plt.gca().transAxes)
+
     plt.savefig(fname=overlay_fname)
     plt.close()
