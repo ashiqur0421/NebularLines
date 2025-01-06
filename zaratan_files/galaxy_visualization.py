@@ -476,10 +476,17 @@ def star_gas_overlay(ds, ad, sp, data_file, center, width, field, lims_dict=None
     print(alpha_star.shape)
     print(p_img.shape)
 
-    img1 = ax.imshow(p_img, norm = norm1, extent = extent_dens, origin = 'lower', aspect = 'auto', cmap = 'inferno', alpha = 1)
+    img1 = ax.imshow(p_img, norm = norm1, extent = extent_dens, origin = 'lower', aspect = 'auto', cmap = 'inferno', alpha = 1, interpolation='bilinear')
     cbar1 = fig.colorbar(img1, ax = ax, orientation = 'vertical', pad = 0.02)
     cbar1.set_label('Projected ' + r'H$\alpha$ Flux [$erg\: s^{-1}\: cm^{-2}$]') # TODO
-    img2 = ax.imshow(stellar_mass_dens, norm = norm2, extent = extent_dens, origin = 'lower', aspect = 'auto', cmap = 'winter_r', alpha = alpha_star)
+    img2 = ax.imshow(stellar_mass_dens, norm = norm2, extent = extent_dens, origin = 'lower', aspect = 'auto', cmap = 'winter_r', interpolation='bilinear')
+
+    # Make sure alpha_star matches the image shape (it must be the same size as the image)
+    if img2.get_array().shape != alpha_star.shape:
+        print(f"Shape mismatch: Image shape {img2.get_array().shape} vs. alpha_star shape {alpha_star.shape}")
+    
+    img2.set_alpha(alpha_star)  # Apply alpha mask after plotting
+
     cbar2 = fig.colorbar(img2, ax = ax, orientation = 'vertical', pad = 0.02)
     cbar2.set_label("Stellar Mass Density")
     # ax.scatter(pop2_xyz[:, 0], pop2_xyz[:, 1], s=5, marker='.', color='black')
@@ -489,7 +496,7 @@ def star_gas_overlay(ds, ad, sp, data_file, center, width, field, lims_dict=None
     ax.set_xlim(-width / 2, width / 2)
     ax.set_ylim(-width / 2, width / 2)
 
-    plt.text(0.05, 0.05, f'z = {redshift:.4f}', color='white', fontsize=9, ha='left', va='bottom', \
+    plt.text(0.05, 0.05, f'z = {redshift:.5f}', color='white', fontsize=9, ha='left', va='bottom', \
              transform=plt.gca().transAxes)
 
     plt.savefig(fname=overlay_fname)
