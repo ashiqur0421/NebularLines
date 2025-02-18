@@ -1,48 +1,96 @@
-'''
-Line Emission from a cloudy output table
-'''
-
+import copy
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator
-import copy
+
+'''
+emission.py
+
+Generate line emission fields from a Cloudy-generated linelist table.
+
+Class structure allows for modularity with emission from multiple
+Cloudy-generated tables. Instantiate an instance of the
+EmissionLineInterpolator class with the file path for a Cloudy-generated
+emission table (a data cube), example:
+
+    filename='linelist.dat'
+    emission_interpolator = EmissionLineInterpolator(filename)
+
+Upon instantiation, the EmissionLineInterpolator object reads the data table,
+reconfigures it into a data cube for usage, and creates interpolators
+for all emission lines. The interpolators take Log(Ionization Parameter U),
+Log(Number Density), Log(Temperature) and return corresponding fluxes
+in specified nebular recombination emission lines. The function 
+get_line_emission() can then be used to get the function necessary for a
+derived field given the index of the emission line in a line list.
+These derived fields are used in yt to contain information about
+the emission in each cell. Each line has two interpolators: one returning
+the actual flux value, and one returning the flux value normalized
+by the density squared. This is how to get interpolated emission for a specific
+line (e.g. line 0 = HII, density normalized):
+
+    line_emission_function = \
+        emission_interpolator.get_line_emission(0, dens_normalized=True)
+
+Author: Braden Nowicki
+'''
+
 
 class EmissionLineInterpolator:
-    def __init__(self, filename):
+    def __init__(self, filename, lines):
         '''
-        Initializes the interpolator with data loaded from the given filename.
+        Initializes the interpolator with line list loaded from the given 
+        filename/filepath.
         
         Parameters:
-        filename (str): The name of the file to load the line emission data from.
+        filename (str): The name/path of the file to load the line emission 
+        data from. This contains a text table. A commented (unread) header
+        displays the lines in the table. The next line (read) gives
+        information about the parameter space:
+
+            minU, maxU, stepU, minN, maxN, stepN, minT, maxT, stepT
+
+        Each column contains the flux [erg s^-1 cm^-2] for the line.
+        Each row is for a specific configuration of parameters.
+        The parameters iterate in a known fashion, allowing each column
+        to be reconfigured into a data cube (flux at each U, N, T point).
+
         '''
+
         self.filename = filename
+        self.lines = lines
         self._load_data()
         self._reconfigure_data_cube()
         self._create_interpolators()
 
+
     def _load_data(self):
-        '''Load line emission data from the file.'''
+        '''
+        Load line emission data from the file.
+        '''
+
         # Read line emission data (line list, run params)
-        minU, maxU, stepU, minN, maxN, stepN, minT, maxT, stepT = np.loadtxt(self.filename, unpack=True, dtype=float, max_rows=1, skiprows=5)
+        minU, maxU, stepU, minN, maxN, stepN, minT, maxT, stepT = \
+            np.loadtxt(self.filename, unpack=True, dtype=float, max_rows=1, 
+                       skiprows=5)
         self.minU, self.maxU, self.stepU = minU, maxU, stepU
         self.minN, self.maxN, self.stepN = minN, maxN, stepN
         self.minT, self.maxT, self.stepT = minT, maxT, stepT
-        print(self.minU, self.maxU, self.stepU, self.minN, self.maxN, self.stepN, self.minT, self.maxT, self.stepT)
+        print(f'minU={self.minU}, maxU={self.maxU}, stepU={self.stepU}, ' +
+              f'minN={self.minN}, maxN={self.maxN}, stepN={self.stepN}, ' +
+              f'minT={self.minT}, maxT={self.maxT}, stepT={self.stepT}')
         
-        self.ll = np.loadtxt(self.filename, unpack=True, dtype=float, skiprows=7)
-        print(self.ll.shape)
+        self.ll = np.loadtxt(self.filename, unpack=True, dtype=float, 
+                             skiprows=7)
+        print(f'Line List Shape = {self.ll.shape}')
+
 
     def _reconfigure_data_cube(self):
-        '''Reconfigure the linelist into a 4D data cube.'''
-
-        titls = [
-            'H1_6562.80A','O1_1304.86A','O1_6300.30A','O2_3728.80A','O2_3726.10A','O3_1660.81A',
-            'O3_1666.15A','O3_4363.21A','O3_4958.91A','O3_5006.84A', 'He2_1640.41A','C2_1335.66A',
-            'C3_1906.68A','C3_1908.73A','C4_1549.00A','Mg2_2795.53A','Mg2_2802.71A','Ne3_3868.76A',
-            'Ne3_3967.47A','N5_1238.82A','N5_1242.80A','N4_1486.50A','N3_1749.67A','S2_6716.44A','S2_6730.82A'
-        ]
+        '''
+        Reconfigure the linelist into a data cube.
+        '''
         
         # Number of emission lines
-        self.ncols = len(titls)
+        self.ncols = len(self.lines)
 
         # Calculate the grid dimensions
         self.dimU = int((self.maxU - self.minU) / self.stepU) + 1
@@ -69,49 +117,66 @@ class EmissionLineInterpolator:
         for i in range(self.ncols):
             self.cub[i] = np.reshape(self.ll[i, :], d)
 
+
     def _create_interpolators(self):
-        '''Create interpolators for each emission line.'''
+        '''
+        Create interpolators for each emission line.
+        '''
+
         self.interpolator = [None] * self.ncols
         for i in np.arange(self.ncols):
-            self.interpolator[i] = RegularGridInterpolator((self.logU, self.logN, self.logT), self.cub[i])
+            self.interpolator[i] = RegularGridInterpolator(
+                (self.logU, self.logN, self.logT), self.cub[i]
+            )
 
         # Normalize by the density squared
         self.dens_normalized_cub = self.cub.copy()
         for i in np.arange(self.dimN):
-            self.dens_normalized_cub[:, :, i, :] = self.dens_normalized_cub[:, :, i, :] / 10 ** (2 * self.logN[i])
+            self.dens_normalized_cub[:, :, i, :] = \
+                self.dens_normalized_cub[:, :, i, :] / 10 ** (2 * self.logN[i])
 
         # Create density squared normalized interpolators
         self.dens_normalized_interpolator = [None] * self.ncols
         for i in np.arange(self.ncols):
-            self.dens_normalized_interpolator[i] = RegularGridInterpolator((self.logU, self.logN, self.logT), self.dens_normalized_cub[i])
+            self.dens_normalized_interpolator[i] = RegularGridInterpolator(
+                (self.logU, self.logN, self.logT), self.dens_normalized_cub[i]
+            )
+
 
     def get_interpolator(self, lineidx, dens_normalized):
         '''
-        Returns the interpolator for the specified line and normalization option.
+        Returns the interpolator for the specified line and normalization 
+        option.
         
         Parameters:
         lineidx (int): Index of the emission line.
-        dens_normalized (bool): Whether to use the density squared normalized interpolator.
+        dens_normalized (bool): Flag - whether to use the density squared 
+        normalized interpolator.
         
         Returns:
-        RegularGridInterpolator: The corresponding interpolator.
+        RegularGridInterpolator: The corresponding interpolator object.
         '''
+
         if dens_normalized:
             return self.dens_normalized_interpolator[lineidx]
         return self.interpolator[lineidx]
 
+
     def get_line_emission(self, idx, dens_normalized):
         '''
         Returns a function for line emission of index idx.
-        Allows for the batch creation of intensity fields for various lines.
+        Allows for the batch creation of flux derived fields for various lines.
         
         Parameters:
         idx (int): The index of the emission line.
-        dens_normalized (bool): Whether to use the density squared normalized version.
+        dens_normalized (bool): Flag - whether to use the density squared 
+        normalized version.
         
         Returns:
-        function: A function that calculates the emission for a given field and data.
+        function: A function that calculates the emission as a derived field.
+        The data parameter represents simulation data loaded into yt.
         '''
+
         def _line_emission(field, data):
             interpolator = self.get_interpolator(idx, dens_normalized)
 
@@ -119,15 +184,20 @@ class EmissionLineInterpolator:
             U_val = data['gas', 'ion-param'].value
             N_val = data['gas', 'number_density'].value
             T_val = data['gas', 'temperature'].value
+            #T_val = data['gas', 'my_temperature'].value
+            # TODO my_temperature
 
-            # Cut off negative temperatures
+            # Truncate negative temperatures
+            # Temperature is a derived/calculated field; there are some
+            # cases in which it is close to or equal to 0.0 K.
             T_val = np.where(T_val < 0.0, 1e-4, T_val)
 
             U = np.log10(U_val)
             N = np.log10(N_val)
             T = np.log10(T_val)
 
-            # Adjust log values to within bounds supported by interpolation table
+            # Adjust log values to within bounds supported by interpolation 
+            # #table
             Uadj = np.where(U < self.minU, self.minU, U)
             Uadj = np.where(Uadj > self.maxU, self.maxU, Uadj)
 
@@ -141,23 +211,36 @@ class EmissionLineInterpolator:
 
             size = Nadj.size
 
-            # Return interpolated values weighted by metallicity for non-Hydrogen and Helium lines
+            # Return interpolated values weighted by metallicity for 
+            # non-Hydrogen and Helium lines
             interp_val = interpolator(tup)
 
+            # TODO check metallicity: mult by 4? solar metallicity?
             if idx not in [0, 10]:
-                interp_val = interp_val * data['gas', 'metallicity']  # TODO: check *4
+                interp_val = interp_val * data['gas', 'metallicity']
 
             if dens_normalized:
                 interp_val = interp_val * data['gas', 'number_density'] ** 2
             else:
-                interp_val = interp_val * data['gas', 'number_density'] / data['gas', 'number_density']
+                interp_val = interp_val * data['gas', 'number_density'] / \
+                    data['gas', 'number_density']
 
             return interp_val
         return copy.deepcopy(_line_emission)
+    
 
-# Usage example
-filename = 'linelist.dat'
-emission_interpolator = EmissionLineInterpolator(filename)
+    def get_luminosity(self, line):
+        '''
+        Return function for derived luminosity field of each line.
+        The Cloudy flux is obtained assuming a gas cloud of height = 1 cm,
+        Returns flux values erg s^-1 c^-2.
+        Multiply the flux at each cell by the volume of the cell
+        to obtain the intrinsic luminosity.
 
-# Get interpolated emission for a specific line (e.g., line 0, normalized by density)
-line_emission_function = emission_interpolator.get_line_emission(0, dens_normalized=True)
+        line (str): desired emission line from field
+        '''
+
+        def _luminosity(field, data):
+            return data['gas', 'intensity_' + line]*data['gas', 'volume']
+        return copy.deepcopy(_luminosity)
+

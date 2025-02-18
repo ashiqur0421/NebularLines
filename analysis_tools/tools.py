@@ -60,27 +60,46 @@ def lvz(data_path:str, sim_titl:str, log) -> None:
 
     y_label = 'Luminosity [$erg\: s^{-1}$]'
 
+
+    redshift, Mstar = np.loadtxt('/Users/bnowicki/Documents/Github/NebularLines/analysis_tools/logSFC', usecols=[2, 7], unpack=True)
+    #redshift = SFC[:2]
+    Mstar = np.cumsum(Mstar)
+    #print(redshift)
+    # deriv cumulative
+
+    # TODO one line and ratios wrt that line
+    # two responses
+    # time shift and ratio (delayed response?)
+    # evolutionary sequence of gas phase following burst
+    # TODO - redshift 1/aexp in info_output...txt
+
     plt.figure(figsize=(10, 6))
 
     # Plot each line in 'line_lums' against 'Z'
-    for i in range(line_lums.shape[1]):
+    #for i in range(line_lums.shape[1]):
+    for i in [0, 3]:
         if log == True:
             plt.plot(Z, np.log10(line_lums[:, i]), label=lines[i])
         else:
             plt.plot(Z, line_lums[:, i], label=lines[i])
 
+    plt.plot(redshift, np.log(Mstar)+30, label=lines[i])
+
     # Label the axes
     plt.xlabel('Redshift')
-    plt.ylabel(r'Luminosity [$erg\: s^{-1}$]')
+    plt.ylabel(r'Log(Luminosity) [$erg\: s^{-1}$]')
+
+    # TODO O2 ratio
 
     # Add a legend
     plt.legend(title=sim_titl, bbox_to_anchor=(1.05, 1), loc='upper left')
     ax = plt.gca()
     ax.invert_xaxis()
+    ax.set_xlim(10.0, 8.0)
 
     # Display the plot
     plt.tight_layout()
-    plt.savefig(f'{directory}/{sim_titl}_lvz_log={log}')
+    #plt.savefig(f'{directory}/{sim_titl}_lvz_log={log}')
     plt.show()
 
 lvz('/Users/bnowicki/Documents/Scratch/movie_dir_2', 'CC Fiducial', True)
@@ -102,7 +121,7 @@ class Simulation_Analysis:
         sim_titl: str referring to simulation
         '''
 
-        self.sim_title = sim_titl
+        self.sim_titl = sim_titl
         self.data_path = data_path
         self.lines = lines
 
@@ -132,3 +151,4 @@ class Simulation_Analysis:
 
 
     
+
