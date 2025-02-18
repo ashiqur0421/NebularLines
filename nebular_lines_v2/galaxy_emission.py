@@ -1,6 +1,7 @@
 import os
 import sys
 
+import numpy as np
 import yt
 from yt.frontends.ramses.field_handlers import RTFieldFileHandler
 
@@ -30,7 +31,7 @@ Setup fields in yt
 filename = sys.argv[1]
 print(f'Line List Filepath = {filename}')
 
-# f1 = "/Users/bnowicki/Documents/Research/Ricotti/output_00273"
+# f1 = "/Users/bnowicki/Documents/Research/Ricotti/output_00273/info_00273.txt"
 # Cloudy Grid Run Bounds for this line list (log values)
 # Umin, Umax, Ustep: -6.0 1.0 0.5
 # Nmin, Nmax, Nstep: -1.0 6.0 0.5
@@ -163,21 +164,41 @@ sim_run = filename.split('/')[-1]
 '''
 Line Luminosities
 '''
-luminosities=[]
 
-#for line in lines:
-#    luminosity=sp_lum.quantities.total_quantity(('gas', 'luminosity_' + line))
-#    print(luminosity)
-#    luminosities.append(luminosity.value)
+# Save data to new directory
+directory = 'analysis/' + sim_run + '_analysis'
+
+if not os.path.exists(directory):
+    os.makedirs(directory)
+
+lum_file_path = os.path.join(directory, sim_run + "_line_luminosity.txt")
+
+
+def calc_luminosities(sp, file_path):
+    '''
+    TODO
+    '''
+
+    luminosities = []
+
+    for line in lines:
+        luminosity=sp.quantities.total_quantity(
+            ('gas', 'luminosity_' + line)
+        )
+        luminosities.append(luminosity.value)
+        print(f'{lines} Luminosity = {luminosity} erg/s')
+    
+    np.savetxt(file_path, luminosities, delimeter=',')
+
+    return luminosities
+    
+#luminosities = calc_luminosities(sp_lum)
 
 directory = 'analysis/' + sim_run + '_analysis'
 
 if not os.path.exists(directory):
     os.makedirs(directory)
 
-# Save the data to the new directory
-#file_path = os.path.join(directory, sim_run + "_line_luminosity.txt")
-#np.savetxt(file_path, luminosities, delimiter=',')
 
 # TODO save mins and max's of fields
 
@@ -265,3 +286,6 @@ def sim_diagnostics(ds, sp, data_file, width):
     galaxy_visualization.star_gas_overlay(ds, ad, sp, data_file, star_ctr, width, 'intensity_H1_6562.80A', lims_dict=lims_00273)
 
 sim_diagnostics(ds, sp, sim_run, width)
+
+
+#maxT = ad.max(('gas', 'temperature'))
