@@ -440,7 +440,8 @@ def get_spectra(lambda_bar, lambda0, temp, m_bar, lambda_arr, h_alpha, vol_frac)
     spectra=gauss_func(lambda_arr, lambda_bar, sigma)*h_alpha*vol_frac
     return spectra, sigma
 
-ds = yt.load("/home/jcottin1/research_summer2023/Job2.2.2/output_01410/info_01410.txt", extra_particle_fields=epf)
+#ds = yt.load("/home/jcottin1/research_summer2023/Job2.2.2/output_01410/info_01410.txt", extra_particle_fields=epf)
+ds = yt.load("/Users/bnowicki/Documents/Research/Ricotti/output_00273/info_00273.txt", fields=cell_fields, extra_particle_fields=epf)
 u=ds.units
 #fields=RTFieldFileHandler.detect_fields(ds).copy()
 #p=RTFieldFileHandler.get_rt_parameters(ds).copy()

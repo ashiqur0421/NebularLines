@@ -108,6 +108,7 @@ def get_line_emission(idx, dens_normalized):
         # Return interpolated values weighted by metallicity
         # for non-Hydrogen and Helium lines
         interp_val = interpolator(tup)
+        interp_val[np.where(Tadj <= minT)] = 0
 
         if idx not in [0, 10]:
            interp_val = interp_val*data['gas', 'metallicity'] #TODO check *4

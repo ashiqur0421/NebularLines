@@ -1,13 +1,3 @@
-'''
-Braden Nowicki
-
-Visualization routines for simulation datasets.
-'''
-
-'''
-Projection, Slice Plot Routines
-'''
-
 # importing packages
 import numpy as np
 import os
@@ -23,166 +13,290 @@ from matplotlib.colors import LogNorm
 import sys
 from scipy.ndimage import gaussian_filter
 
+'''
+galaxy_visualization.py
+
+Author: Braden Nowicki
+
+Visualization and analysis routines for RAMSES-RT Simulations.
+
+'''
+
+'''
+Projection, Slice Plot Routines
+'''
+
+# TODO docstrings
+
 # Cloudy Grid Run Bounds (log values)
 # Umin, Umax, Ustep: -6.0 1.0 0.5
 # Nmin, Nmax, Nstep: -1.0 6.0 0.5 
 # Tmin, Tmax, Tstop: 3.0 6.0 0.1
 
-lines=["H1_6562.80A","O1_1304.86A","O1_6300.30A","O2_3728.80A","O2_3726.10A","O3_1660.81A",
-       "O3_1666.15A","O3_4363.21A","O3_4958.91A","O3_5006.84A", "He2_1640.41A","C2_1335.66A",
-       "C3_1906.68A","C3_1908.73A","C4_1549.00A","Mg2_2795.53A","Mg2_2802.71A","Ne3_3868.76A",
-       "Ne3_3967.47A","N5_1238.82A","N5_1242.80A","N4_1486.50A","N3_1749.67A","S2_6716.44A","S2_6730.82A"]
+lines=["H1_6562.80A","O1_1304.86A","O1_6300.30A","O2_3728.80A","O2_3726.10A",
+       "O3_1660.81A","O3_1666.15A","O3_4363.21A","O3_4958.91A","O3_5006.84A", 
+       "He2_1640.41A","C2_1335.66A","C3_1906.68A","C3_1908.73A","C4_1549.00A",
+       "Mg2_2795.53A","Mg2_2802.71A","Ne3_3868.76A","Ne3_3967.47A","N5_1238.82A",
+       "N5_1242.80A","N4_1486.50A","N3_1749.67A","S2_6716.44A","S2_6730.82A"]
 
-wavelengths=[6562.80, 1304.86, 6300.30, 3728.80, 3726.10, 1660.81, 1666.15, \
-             4363.21, 4958.91, 5006.84, 1640.41, 1335.66, \
-             1906.68, 1908.73, 1549.00, 2795.53, 2802.71, 3868.76, \
-             3967.47, 1238.82, 1242.80, 1486.50, 1749.67, 6716.44, 6730.82]
+wavelengths=[6562.80, 1304.86, 6300.30, 3728.80, 3726.10, 
+             1660.81, 1666.15, 4363.21, 4958.91, 5006.84, 
+             1640.41, 1335.66, 1906.68, 1908.73, 1549.00, 
+             2795.53, 2802.71, 3868.76, 3967.47, 1238.82, 
+             1242.80, 1486.50, 1749.67, 6716.44, 6730.82]
 
 
-# Find center of mass of star particles
-def star_center(ad):
-    x_pos = np.array(ad["star", "particle_position_x"])
-    y_pos = np.array(ad["star", "particle_position_y"])
-    z_pos = np.array(ad["star", "particle_position_z"])
-    x_center = np.mean(x_pos)
-    y_center = np.mean(y_pos)
-    z_center = np.mean(z_pos)
-    x_pos = x_pos - x_center
-    y_pos = y_pos - y_center
-    z_pos = z_pos - z_center
-    ctr_at_code = np.array([x_center, y_center, z_center])
-    return ctr_at_code
+class VisualizationManager:
 
-# Projection Plot Driver 
-# Simplify making consistent plots of different fields
-# field specified as a tuple
-# width specified as a tuple wtih number and units, e.g (700, 'pc')
-# Alternatively, can plot width=0.0001 - portion of box in code units
-# weight_field can be specified or None for no weight field
-def proj_plot(ds, sp, width, center, field, weight_field):
-    if weight_field == None:
-        p = yt.ProjectionPlot(ds, "z", field,
-                      width=width,
-                      data_source=sp,
-                      buff_size=(1000, 1000),
-                      center=center)
-    else:
-        p = yt.ProjectionPlot(ds, "z", field,
-                      width=width,
-                      weight_field=weight_field,
-                      data_source=sp,
-                      buff_size=(1000, 1000),
-                      center=center)
-    return p
+    def __init__(self, filename, lines, wavelengths):
+        '''
+        
+        Parameters:
+        filename (str): filepath to the RAMSES-RT output_* folder
+        lines (List, strings): List of nebular emission lines
+        wavelengths (List, floats): List of corresponding wavelengths
 
-# Slice Plot Driver
-def slc_plot(ds, width, center, field):
-    slc = yt.SlicePlot(
-                    ds, "z", field,
-                    center=center,
-                    width=width,
-                    buff_size=(1000, 1000))
+        output_file (str): output folder, e.g. output_00273
+        sim_run (str): Time slice number for simulation eg. 00273
+        info_file (sr): Filename with info file appended '/info_00273.txt'
 
-    return slc
+        '''
 
-# yt_plot projection or slice plot, field as a string, lbox in pc
-# plot_type = 'slc' or 'proj', data_file - string of input data being read
-# Title String with Units
-def convert_to_plt(data_file, yt_plot, plot_type, field, lbox, title):
-    directory = 'analysis/' + data_file + '_analysis'
+        self.filename = filename
+        self.lines = lines
+        self.wavelengths = wavelengths
+        self.output_file = filename.split('/')[-1]
+        self.sim_run = self.output_file.split('_')[1]
+        self.info_file = f'{filename}/info_{self.sim_run}.txt'
 
-    if not os.path.exists(directory):
-        os.makedirs(directory)
+        self.directory = f'analysis/{self.output_file}_analysis'
 
-    fname = os.path.join(directory, str(lbox) + 'pc_' + field.replace('.', ',') + '_' + plot_type)
+        if not os.path.exists(self.directory):
+            os.makedirs(self.directory)
 
-    plot_frb = yt_plot.frb
-    p_img = np.array(plot_frb['gas', field])
-
-    if np.min(p_img) <= 0:
-        print("Warning: Data contains non-positive values. Adjusting for LogNorm.")
-        p_img = np.clip(p_img, a_min=1e-10, a_max=None)  # Clip values below 1e-10 to avoid log of zero
-
-    extent_dens = [-lbox/2, lbox/2, -lbox/2, lbox/2]
-    dens_norm = LogNorm(np.min(p_img), np.max(p_img))
-    fig = plt.figure()
-    im = plt.imshow(p_img, norm=dens_norm, extent=extent_dens, origin='lower', aspect='auto', interpolation='nearest')
-    plt.xlabel("X (pc)")
-    plt.ylabel("Y (pc)")
-    plt.title(title)
-    plt.xlim(-lbox/2, lbox/2)
-    plt.ylim(-lbox/2, lbox/2)
-    plt.colorbar(im)
-    plt.savefig(fname=fname)
-    plt.close()
-
-def convert_to_plt_2(data_file, yt_plot, plot_type, field, lbox, redshift, title, lims=None):
-    '''
-    lims = [vmin, vmax] fixed limits on colorbar values for image if desired; else None
-    '''
-
-    directory = 'analysis/' + data_file + '_analysis'
-
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-
-    fname = os.path.join(directory, data_file + '_' + str(lbox) + 'pc_' + field.replace('.', ',') + '_' + plot_type)
-    if lims != None:
-        fname = fname + '_lims'
-
-    plot_frb = yt_plot.frb
-    p_img = np.array(plot_frb['gas', field])
-
-    # Clip non-positive values to avoid log of zero or negative numbers
-    if np.min(p_img) <= 0:
-        print("Warning: Data contains non-positive values. Adjusting for LogNorm.")
-        p_img = np.clip(p_img, a_min=1e-10, a_max=None)  # Clip values below 1e-10
-
-    # Set the extent of the plot (this assumes 'lbox' is the length of the box in parsecs)
-    extent_dens = [-lbox / 2, lbox / 2, -lbox / 2, lbox / 2]
-
-    # Define the color normalization based on the range of the data
-    if lims == None:
-        dens_norm = LogNorm(vmin=np.min(p_img), vmax=np.max(p_img))
-    else:
-        # Set fixed color normalization limits (vmin and vmax for the colorbar)
-        dens_norm = LogNorm(vmin=lims[0], vmax=lims[1])
-
-    # Create the figure
-    fig = plt.figure(figsize=(8, 6))
     
-    # Create the image plot
-    im = plt.imshow(p_img, norm=dens_norm, extent=extent_dens, origin='lower', 
-                    aspect='auto', interpolation='bilinear', cmap='viridis')
-    
-    #cmap viridis, inferno, magma
-    
-    # Add labels and title
-    plt.xlabel("X (pc)", fontsize=12)
-    plt.ylabel("Y (pc)", fontsize=12)
-    plt.title(title, fontsize=14)
-    
-    # Set axis limits
-    plt.xlim(-lbox / 2, lbox / 2)
-    plt.ylim(-lbox / 2, lbox / 2)
+    # Find center of mass of star particles
+    # TODO ds and ad as attributes of class?
+    def star_center(self, ad):
+        '''
+        Locate the center of mass of star particles in code units.
 
-    # Add color bar
-    cbar = plt.colorbar(im)
+        Parameters:
+        ad: data object from RAMSES-RT output loaded into yt-project
 
-    # Add redshift
-    plt.text(0.05, 0.05, f'z = {redshift:.5f}', color='white', fontsize=9, ha='left', va='bottom', \
-             transform=plt.gca().transAxes)
-    # TODO font
+        Returns:
+        ctr_at_code (List, float): Coordinates (code units) of center of mass
 
-    # Save the figure
-    plt.savefig(fname, dpi=300)
-    plt.close()
+        '''
+
+        x_pos = np.array(ad["star", "particle_position_x"])
+        y_pos = np.array(ad["star", "particle_position_y"])
+        z_pos = np.array(ad["star", "particle_position_z"])
+        x_center = np.mean(x_pos)
+        y_center = np.mean(y_pos)
+        z_center = np.mean(z_pos)
+        x_pos = x_pos - x_center
+        y_pos = y_pos - y_center
+        z_pos = z_pos - z_center
+        ctr_at_code = np.array([x_center, y_center, z_center])
+        return ctr_at_code
+
+
+    def proj_plot(self, ds, sp, width, center, field, weight_field):
+        '''
+        Projection Plot Driver.
+
+        Parameters:
+        ds: loaded RAMSES-RT data set
+        sp: sphere data object to project within
+        width (tuple, int and str): width in code units or formatted with 
+            units, e.g. (1500, 'pc')
+        center (List, float): center (array of 3 values) in code units
+        field (tuple, str): field to project, e.g. ('gas', 'temperature')
+        weight_field (tuple, str): field to weight project (or None if 
+            unweighted)
+
+        Returns:
+        Projection Plot Object
+        '''
+
+        if weight_field == None:
+            p = yt.ProjectionPlot(ds, "z", field,
+                          width=width,
+                          data_source=sp,
+                          buff_size=(1000, 1000),
+                          center=center)
+        else:
+            p = yt.ProjectionPlot(ds, "z", field,
+                          width=width,
+                          weight_field=weight_field,
+                          data_source=sp,
+                          buff_size=(1000, 1000),
+                          center=center)
+        return p
+
+
+    def slc_plot(self, ds, width, center, field):
+        '''
+        Slice Plot Driver.
+
+        Parameters:
+        ds: load RAMSES-RT data set
+        width (tuple, int and str): width in code units or formatted with 
+            units, e.g. (1500, 'pc')
+        center (List, float): center (array of 3 values) in code units
+        field (tuple, str): field to project, e.g. ('gas', 'temperature')
+        
+        Returns:
+        Slice Plot Object
+        '''
+
+        slc = yt.SlicePlot(
+                        ds, "z", field,
+                        center=center,
+                        width=width,
+                        buff_size=(1000, 1000))
+
+        return slc
+    
+
+    def convert_to_plt(self, yt_plot, plot_type, field, width, 
+                       redshift, title, lims=None):
+        '''
+        Convert a yt projection or slice plot to matplotlib.
+
+        Parameters:
+        yt_plot: Projection or Slice Plot Object
+        plot_type (str): Type of plot (for filename) - 'proj' or 'slc'
+        field (tuple, str): field to plot, e.g. ('gas', 'temperature')
+        width (tuple, int and str): width in code units or formatted with 
+            units, e.g. (1500, 'pc')
+        redshift (float): redshift of current time slice
+        title (str): Plot title
+        lims (None or List): [vmin, vmax] fixed limits on colorbar values
+            for image if desired; otherwise None
+
+        Returns:
+        NA
+
+        Saves desired figures with usable file naming scheme.
+        '''
+
+        lbox = width[0]
+        length_unit = width[1]
+
+        plot_title = f'{self.output_file}_{lbox}{length_unit}_' + \
+            f'{field.replace('.',',')}_{plot_type}'
+
+        fname = os.path.join(self.directory, plot_title)
+        if lims != None:
+            fname = fname + '_lims'
+
+        plot_frb = yt_plot.frb
+        # TODO check below
+        #p_img = np.array(plot_frb['gas', field])
+        p_img = np.array(plot_frb[field[0], field[1]])
+
+        # Clip non-positive values to avoid log of zero or negative numbers
+        if np.min(p_img) <= 0:
+            print('Warning: Data contains non-positive values. Adjusting ' +
+                  'for LogNorm.')
+            
+            # Clip values below 1e-10
+            p_img = np.clip(p_img, a_min=1e-10, a_max=None)
+
+        # Set the extent of the plot
+        extent_dens = [-lbox / 2, lbox / 2, -lbox / 2, lbox / 2]
+
+        # Define the color normalization based on the range of the data
+        if lims == None:
+            dens_norm = LogNorm(vmin=np.min(p_img), vmax=np.max(p_img))
+        else:
+            # Set fixed color normalization limits
+            dens_norm = LogNorm(vmin=lims[0], vmax=lims[1])
+
+
+        # Viridis, Inferno, Magma maps work - perceptually uniform
+        fig = plt.figure(figsize=(8, 6))
+        im = plt.imshow(p_img, norm=dens_norm, extent=extent_dens, 
+                        origin='lower', aspect='auto', 
+                        interpolation='bilinear', cmap='viridis')
+
+        plt.xlabel(f'X [{length_unit}]', fontsize=12)
+        plt.ylabel(f'Y [{length_unit}]', fontsize=12)
+        plt.title(title, fontsize=14)
+
+        plt.xlim(-lbox / 2, lbox / 2)
+        plt.ylim(-lbox / 2, lbox / 2)
+
+        cbar = plt.colorbar(im)
+
+        # Add redshift
+        plt.text(0.05, 0.05, f'z = {redshift:.5f}', color='white', fontsize=9,
+                 ha='left', va='bottom', transform=plt.gca().transAxes)
+        # TODO font
+
+        # Save the figure
+        plt.savefig(fname, dpi=300)
+        plt.close()
+
+
+    def plot_wrapper(self, ds, sp, width, center, field_list,
+                     weight_field_list, title_list, proj=True, slc=True,
+                     lims_dict=None, lims_titles=None):
+        '''
+        Wrapper for plotting a variety of fields simultaneously.
+
+        Parameters:
+        ds: loaded RAMSES-RT data set
+        sp: sphere data object to project within
+        center (List, float): center (array of 3 values) in code units
+        width (tuple, int and str): width in code units or formatted with 
+            units, e.g. (1500, 'pc')
+        field_list (List of tuple, str): list of fields to plot, e.g. 
+            ('gas', 'temperature')
+        weight_field_list (List of tuple, str): list of fields to weight 
+            projections (or None if unweighted)
+        title_list (List of str): list of titles associated with plots
+        lims_dict (None or Dict): dictionary of [vmin, vmax] fixed limits on
+            colorbar values for image if desired; otherwise None
+        lims_titles (List, str): titles associated with lims_dict for
+            corresponding fields
+        '''
+
+        redshift = ds.current_redshift
+
+        for i, field in enumerate(field_list):
+            if proj:
+                p = self.proj_plot(ds, sp, width, center, field, 
+                                   weight_field_list[i])
+                
+                if lims_dict == None:
+                    self.convert_to_plt(p, 'proj', field, width, redshift,
+                                        title_list[i])
+                else:
+                    self.convert_to_plt(p, 'proj', field, width, redshift,
+                                        title_list[i], 
+                                        lims_dict[lims_titles[i]])
+
+            if slc:
+                p = self.slc_plot(ds, width, center, field)
+                
+                if lims_dict == None:
+                    self.convert_to_plt(p, 'slc', field, width, redshift,
+                                        title_list[i])
+                else:
+                    self.convert_to_plt(p, 'slc', field, width, redshift,
+                                        title_list[i], 
+                                        lims_dict[lims_titles[i]])
+
 
 '''
 Projection Plots of Ionization Parameter, Number Density, 
 Mass Density, Temperature, Metallicity
 '''
 
+'''
 # TODO update convert to plt to do both versions of plots with and without limits
 
 # Wrapper for making diagnostic plots of given fields
@@ -224,9 +338,9 @@ def plot_diagnostics(ds, sp, data_file, center, width, lims_dict=None):
     else:
         convert_to_plt_2(data_file, proj_metallicity, 'proj', 'metallicity', width, redshift, 'Metallicity', lims_dict['Metallicity'])
 
-'''
+
 Visualizing Line Intensities
-'''
+
 
 def plot_intensities(ds, sp, data_file, center, width, lims_dict=None):
     redshift = ds.current_redshift
@@ -251,7 +365,8 @@ def plot_intensities(ds, sp, data_file, center, width, lims_dict=None):
 
     slc_halpha = slc_plot(ds, (width, 'pc'), center, ('gas', 'intensity_H1_6562.80A'))
     convert_to_plt_2(data_file, slc_halpha, 'slc', 'intensity_H1_6562.80A', width, redshift, r'H$\alpha$ 6562.80A Flux [$erg\: s^{-1}\: cm^{-2}$]')
-
+'''
+    
 '''
 Plot Spectra at simulated wavelengths
 '''
@@ -501,3 +616,11 @@ def star_gas_overlay(ds, ad, sp, data_file, center, width, field, lims_dict=None
 
     plt.savefig(fname=overlay_fname)
     plt.close()
+
+
+
+
+# TODO 1D Profile Plots, Phase Plots
+# Save header information to a text file
+# Save lines and wavelengths
+# Save mins, maxs, means

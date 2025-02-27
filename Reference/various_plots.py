@@ -375,7 +375,7 @@ def _NpHI(field, data):
 # データの読み込み
 ###########################
 #yt.funcs.mylog.setLevel(1) #log表示レベルの設定
-
+infofile_fp = "/Users/bnowicki/Documents/Research/Ricotti/output_00273/info_00273.txt"
 ds = yt.load(infofile_fp, fields=FIELDS, extra_particle_fields=EPF)
 
 if not args.DM_only:

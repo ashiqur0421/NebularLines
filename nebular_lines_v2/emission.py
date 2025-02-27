@@ -5,6 +5,8 @@ from scipy.interpolate import RegularGridInterpolator
 '''
 emission.py
 
+Author: Braden Nowicki
+
 Generate line emission fields from a Cloudy-generated linelist table.
 
 Class structure allows for modularity with emission from multiple
@@ -31,9 +33,9 @@ line (e.g. line 0 = HII, density normalized):
     line_emission_function = \
         emission_interpolator.get_line_emission(0, dens_normalized=True)
 
-Author: Braden Nowicki
 '''
 
+# TODO docstrings
 
 class EmissionLineInterpolator:
     def __init__(self, filename, lines):
@@ -204,7 +206,8 @@ class EmissionLineInterpolator:
             Nadj = np.where(N < self.minN, self.minN, N)
             Nadj = np.where(Nadj > self.maxN, self.maxN, Nadj)
 
-            Tadj = np.where(T < self.minT, self.minT, T)
+            # TODO set to 0 below
+            #Tadj = np.where(T < self.minT, self.minT, T)
             Tadj = np.where(Tadj > self.maxT, self.maxT, Tadj)
 
             tup = np.stack((Uadj, Nadj, Tadj), axis=-1)
@@ -214,6 +217,7 @@ class EmissionLineInterpolator:
             # Return interpolated values weighted by metallicity for 
             # non-Hydrogen and Helium lines
             interp_val = interpolator(tup)
+            interp_val[np.where(Tadj <= self.minT)] = 0
 
             # TODO check metallicity: mult by 4? solar metallicity?
             if idx not in [0, 10]:

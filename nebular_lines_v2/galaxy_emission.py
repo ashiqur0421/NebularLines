@@ -9,6 +9,10 @@ from emission import EmissionLineInterpolator
 import galaxy_visualization
 
 '''
+galaxy_emission.py
+
+Author: Braden Nowicki
+
 Braden Nowicki with Dr. Massimo Ricotti
 University of Maryland, College Park Astronomy Department
 
@@ -19,8 +23,9 @@ into an interpolator for each line; the interpolator is created via the
 module 'emission.py'. An EmissionLineInterpolator object is instantiated
 given a filepath for a Cloudy-generated line flux list/data table.
 
-Author: Braden Nowicki
 '''
+
+# TODO docstrings
 
 '''
 -------------------------------------------------------------------------------
@@ -28,6 +33,7 @@ Setup fields in yt
 -------------------------------------------------------------------------------
 '''
 
+# Specify output_* folder
 filename = sys.argv[1]
 print(f'Line List Filepath = {filename}')
 
@@ -37,7 +43,8 @@ print(f'Line List Filepath = {filename}')
 # Nmin, Nmax, Nstep: -1.0 6.0 0.5
 # Tmin, Tmax, Tstop: 3.0 6.0 0.1
 
-lines=["H2_6562.80A","O1_1304.86A","O1_6300.30A","O2_3728.80A","O2_3726.10A",
+# TODO H2
+lines=["H1_6562.80A","O1_1304.86A","O1_6300.30A","O2_3728.80A","O2_3726.10A",
        "O3_1660.81A","O3_1666.15A","O3_4363.21A","O3_4958.91A","O3_5006.84A", 
        "He2_1640.41A","C2_1335.66A","C3_1906.68A","C3_1908.73A","C4_1549.00A",
        "Mg2_2795.53A","Mg2_2802.71A","Ne3_3868.76A","Ne3_3967.47A","N5_1238.82A",
@@ -206,6 +213,7 @@ if not os.path.exists(directory):
 Create figures
 '''
 
+# store in files
 # Dictionary of manual limits for each line for animating
 # galaxies over time slices (fix colorbar limits for visual consistency)
 lims_00273 = {
