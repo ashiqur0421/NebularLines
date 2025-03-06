@@ -180,7 +180,7 @@ boxsize_in_kpc = ds.domain_width.in_units('kpc')[0] #boxsize in [kpc]
 
 print(ds.field_list)
 
-'''
+
 slc = yt.SlicePlot(
                     ds, "z", ('ramses', 'xHI'),
                     center=[0.49118094, 0.49275361, 0.49473726],
@@ -201,7 +201,7 @@ slc = yt.SlicePlot(
                     width=(1500, 'pc'),
                     buff_size=(1000, 1000))
 slc.save()
-'''
+
 slc = yt.SlicePlot(
                     ds, "z", ('ramses-rt', 'Photon_density_2'),
                     center=[0.49118094, 0.49275361, 0.49473726],

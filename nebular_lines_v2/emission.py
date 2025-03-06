@@ -207,7 +207,7 @@ class EmissionLineInterpolator:
             Nadj = np.where(Nadj > self.maxN, self.maxN, Nadj)
 
             # TODO set to 0 below
-            #Tadj = np.where(T < self.minT, self.minT, T)
+            Tadj = np.where(T < self.minT, self.minT, T)
             Tadj = np.where(Tadj > self.maxT, self.maxT, Tadj)
 
             tup = np.stack((Uadj, Nadj, Tadj), axis=-1)
@@ -221,7 +221,7 @@ class EmissionLineInterpolator:
 
             # TODO check metallicity: mult by 4? solar metallicity?
             if idx not in [0, 10]:
-                interp_val = interp_val * data['gas', 'metallicity']
+                interp_val = interp_val * data['gas', 'Metallicity']
 
             if dens_normalized:
                 interp_val = interp_val * data['gas', 'number_density'] ** 2

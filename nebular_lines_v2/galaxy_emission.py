@@ -26,6 +26,8 @@ given a filepath for a Cloudy-generated line flux list/data table.
 '''
 
 # TODO docstrings
+# TODO change to use mytemperature
+# TODO new hydrofile versions
 
 '''
 -------------------------------------------------------------------------------
@@ -55,7 +57,7 @@ wavelengths=[6562.80, 1304.86, 6300.30, 3728.80, 3726.10, 1660.81, 1666.15, \
              1906.68, 1908.73, 1549.00, 2795.53, 2802.71, 3868.76, \
              3967.47, 1238.82, 1242.80, 1486.50, 1749.67, 6716.44, 6730.82]
 
-'''
+
 cell_fields = [
     "Density",
     "x-velocity",
@@ -69,7 +71,7 @@ cell_fields = [
     "xHeII",
     "xHeIII",
 ]
-'''
+
 epf = [
     ("particle_family", "b"),
     ("particle_tag", "b"),
@@ -94,6 +96,25 @@ def _ion_param(field, data):
     photon = pd_2 + pd_3 + pd_4
 
     return photon/data['gas', 'number_density']
+
+def _my_temperature(field, data):
+    #y(i): abundance per hydrogen atom
+    XH_RAMSES=0.76 #defined by RAMSES in cooling_module.f90
+    YHE_RAMSES=0.24 #defined by RAMSES in cooling_module.f90
+    mH_RAMSES=yt.YTArray(1.6600000e-24,"g") #defined by RAMSES in cooling_module.f90
+    kB_RAMSES=yt.YTArray(1.3806200e-16,"erg/K") #defined by RAMSES in cooling_module.f90
+
+    dn=data["ramses","Density"].in_cgs()
+    pr=data["ramses","Pressure"].in_cgs()
+    yHI=data["ramses","xHI"]
+    yHII=data["ramses","xHII"]
+    yHe = YHE_RAMSES*0.25/XH_RAMSES
+    yHeII=data["ramses","xHeII"]*yHe
+    yHeIII=data["ramses","xHeIII"]*yHe
+    yH2=1.-yHI-yHII
+    yel=yHII+yHeII+2*yHeIII
+    mu=(yHI+yHII+2.*yH2 + 4.*yHe) / (yHI+yHII+yH2 + yHe + yel)
+    return pr/dn * mu * mH_RAMSES / kB_RAMSES
 
 '''
 # TODO see if it works in emission.py
@@ -120,6 +141,14 @@ yt.add_field(
     force_override=True
 )
 
+yt.add_field(
+    ("gas","my_temperature"),
+    function=_my_temperature,
+    sampling_type="cell",
+    units="K",
+    force_override=True
+)
+
 # Normalize by Density Squared Flag
 dens_normalized = True
 if dens_normalized: 
@@ -128,7 +157,8 @@ else:
     units = '1'
 
 # Instance of EmissionLineInterpolator for line list at filename
-emission_interpolator = EmissionLineInterpolator(filename, lines)
+line_list = os.path.join(os.getcwd(), 'nebular_lines_v2/linelist.dat')
+emission_interpolator = EmissionLineInterpolator(line_list, lines)
 
 # Add flux and luminosity fields for all lines in the list
 for i, line in enumerate(lines):
@@ -161,17 +191,72 @@ Run routines on data
 
 ds = yt.load(filename, extra_particle_fields=epf)
 ad = ds.all_data()
-star_ctr=galaxy_visualization.star_center(ad)
+
+viz = galaxy_visualization.VisualizationManager(filename, lines, wavelengths)
+star_ctr = viz.star_center(ad)
 sp = ds.sphere(star_ctr, (3000, "pc"))
 sp_lum = ds.sphere(star_ctr, (10, 'kpc'))
-width = 1500
+width = (1500, 'pc')
 
 sim_run = filename.split('/')[-1]
+
+field_list = [
+    ('gas', 'temperature'),
+    ('gas', 'density'),
+    ('gas', 'number_density'),
+    ('gas', 'my_temperature'),
+    ('gas', 'ion-param'),
+    ('gas', 'Metallicity')
+]
+
+weight_field_list = [
+    ('gas', 'number_density'),
+    ('gas', 'number_density'),
+    ('gas', 'number_density'),
+    ('gas', 'number_density'),
+    ('gas', 'number_density'),
+    ('gas', 'number_density')
+]
+
+title_list = [
+    'Temperature [K]',
+    r'Density [$g\: cm^{-3}$]',
+    r'Number Density [$cm^{-3}$]',
+    'My Temperature [K]',
+    'Ionization Parameter',
+    'Metallicity'
+]
+
+for line in lines:
+    if line == 'H1_6562.80A':
+        line_title = r'H$\alpha$_6562.80A'
+    else:
+        line_title = line
+
+    field_list.append(('gas', 'flux_'  + line))
+    title_list.append(line_title.replace('_', ' ') + 
+                      r' Flux [$erg\: s^{-1}\: cm^{-2}$]')
+    weight_field_list.append(None)
+
+    field_list.append(('gas', 'luminosity_'  + line))
+    title_list.append(line_title.replace('_', ' ') + 
+                      r' Luminosity [$erg\: s^{-1}$]')
+    weight_field_list.append(None)
+
+
+viz.plot_wrapper(ds, sp, width, star_ctr, field_list,
+                     weight_field_list, title_list, proj=True, slc=True)
+
+#viz.calc_luminosities(sp)
+viz.save_sim_info(ds)
+
+
 
 '''
 Line Luminosities
 '''
 
+'''
 # Save data to new directory
 directory = 'analysis/' + sim_run + '_analysis'
 
@@ -182,9 +267,6 @@ lum_file_path = os.path.join(directory, sim_run + "_line_luminosity.txt")
 
 
 def calc_luminosities(sp, file_path):
-    '''
-    TODO
-    '''
 
     luminosities = []
 
@@ -209,11 +291,11 @@ if not os.path.exists(directory):
 
 # TODO save mins and max's of fields
 
-'''
-Create figures
-'''
 
-# store in files
+Create figures
+
+
+# store in files JSON TODO
 # Dictionary of manual limits for each line for animating
 # galaxies over time slices (fix colorbar limits for visual consistency)
 lims_00273 = {
@@ -296,4 +378,5 @@ def sim_diagnostics(ds, sp, data_file, width):
 sim_diagnostics(ds, sp, sim_run, width)
 
 
-#maxT = ad.max(('gas', 'temperature'))
+#maxT = ad.max(('gas', 'temperature'))'
+'''

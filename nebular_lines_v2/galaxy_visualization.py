@@ -1,5 +1,6 @@
 # importing packages
 import numpy as np
+import shutil
 import os
 import matplotlib.pyplot as plt
 import emission
@@ -33,6 +34,7 @@ Projection, Slice Plot Routines
 # Nmin, Nmax, Nstep: -1.0 6.0 0.5 
 # Tmin, Tmax, Tstop: 3.0 6.0 0.1
 
+'''
 lines=["H1_6562.80A","O1_1304.86A","O1_6300.30A","O2_3728.80A","O2_3726.10A",
        "O3_1660.81A","O3_1666.15A","O3_4363.21A","O3_4958.91A","O3_5006.84A", 
        "He2_1640.41A","C2_1335.66A","C3_1906.68A","C3_1908.73A","C4_1549.00A",
@@ -44,7 +46,7 @@ wavelengths=[6562.80, 1304.86, 6300.30, 3728.80, 3726.10,
              1640.41, 1335.66, 1906.68, 1908.73, 1549.00, 
              2795.53, 2802.71, 3868.76, 3967.47, 1238.82, 
              1242.80, 1486.50, 1749.67, 6716.44, 6730.82]
-
+'''
 
 class VisualizationManager:
 
@@ -58,16 +60,18 @@ class VisualizationManager:
 
         output_file (str): output folder, e.g. output_00273
         sim_run (str): Time slice number for simulation eg. 00273
-        info_file (sr): Filename with info file appended '/info_00273.txt'
+        info_file (str): Filename with info file appended '/info_00273.txt'
+        TODO directory
 
         '''
 
         self.filename = filename
+        self.file_dir = os.path.dirname(self.filename)
         self.lines = lines
         self.wavelengths = wavelengths
-        self.output_file = filename.split('/')[-1]
+        self.output_file = self.filename.split('/')[-1]
         self.sim_run = self.output_file.split('_')[1]
-        self.info_file = f'{filename}/info_{self.sim_run}.txt'
+        self.info_file = f'{self.filename}/info_{self.sim_run}.txt'
 
         self.directory = f'analysis/{self.output_file}_analysis'
 
@@ -160,6 +164,7 @@ class VisualizationManager:
         return slc
     
 
+    # TODO change redshift to self
     def convert_to_plt(self, yt_plot, plot_type, field, width, 
                        redshift, title, lims=None):
         '''
@@ -184,9 +189,10 @@ class VisualizationManager:
 
         lbox = width[0]
         length_unit = width[1]
+        field_comma = field.replace('.', ',')
 
         plot_title = f'{self.output_file}_{lbox}{length_unit}_' + \
-            f'{field.replace('.',',')}_{plot_type}'
+            f'{field_comma}_{plot_type}'
 
         fname = os.path.join(self.directory, plot_title)
         if lims != None:
@@ -273,10 +279,10 @@ class VisualizationManager:
                 
                 if lims_dict == None:
                     self.convert_to_plt(p, 'proj', field, width, redshift,
-                                        title_list[i])
+                                        'Projected ' + title_list[i])
                 else:
                     self.convert_to_plt(p, 'proj', field, width, redshift,
-                                        title_list[i], 
+                                        'Projected ' + title_list[i], 
                                         lims_dict[lims_titles[i]])
 
             if slc:
@@ -289,6 +295,193 @@ class VisualizationManager:
                     self.convert_to_plt(p, 'slc', field, width, redshift,
                                         title_list[i], 
                                         lims_dict[lims_titles[i]])
+                    
+    
+    def save_array_with_headers(self, filename, array, headers, delimiter=','):
+        '''
+        Saves a NumPy array to a text file, including column headers.
+
+        Parameters:
+        filename (str): The name of the file to save to.
+        array (np.ndarray): The NumPy array to save.
+        headers (List): A list of strings representing the column headers.
+        delimiter (str, optional): The delimiter to use between values. 
+            Defaults to ','.
+        '''
+        with open(filename, 'w') as file:
+            file.write(delimiter.join(headers) + '\n')
+            np.savetxt(file, array, delimiter=delimiter, fmt='%s')
+
+
+    def calc_luminosities(self, sp):
+        '''
+        Agreggate luminosities for each emission line in sphere sp.
+
+        Parameters:
+        sp: Data sphere.
+
+        Returns:
+        luminosities (List, float): array of luminosities for corresponding
+            emission lines.
+        '''
+
+        lum_file_path = os.path.join(self.directory, 
+                                     f'{self.output_file}_line_luminosity.txt')
+
+        luminosities = []
+
+        for line in self.lines:
+            luminosity=sp.quantities.total_quantity(
+                ('gas', 'luminosity_' + line)
+            )
+            luminosities.append(luminosity.value)
+            print(f'{line} Luminosity = {luminosity} erg/s')
+
+        # TODO
+        #emission_line_str = ", ".join(self.lines)
+        #np.savetxt(lum_file_path, luminosities, delimeter=',', 
+        #           header=emission_line_str)
+
+        self.save_array_with_headers(lum_file_path, luminosities, self.lines)
+        
+        self.luminosities = luminosities
+
+        return luminosities
+    
+
+    def save_sim_info(self, ds):
+        '''
+        Save simulation parameters/information.
+
+        Parameters:
+        ds: RAMSES data loaded into yt.
+        '''
+
+        self.current_time = ds.current_time
+        self.domain_dimensions = ds.domain_dimensions
+        self.domain_left_edge = ds.domain_left_edge
+        self.domain_right_edge = ds.domain_right_edge
+        self.cosmological_simulation = ds.cosmological_simulation
+        self.current_redshift = ds.current_redshift
+        self.omega_lambda = ds.omega_lambda
+        self.omega_matter = ds.omega_matter
+        self.omega_radiation = ds.omega_radiation
+        self.hubble_constant = ds.hubble_constant
+
+
+        file_path = os.path.join(self.directory, 
+                                f'{self.output_file}_sim_info.txt')
+        
+        with open(file_path, 'w') as file:
+            file.write(f'current_time: {self.current_time}\n')
+            file.write(f'domain_dimensions: {self.domain_dimensions}\n')
+            file.write(f'domain_left_edge: {self.domain_left_edge}\n')
+            file.write(f'domain_right_edge: {self.domain_right_edge}\n')
+            file.write(f'cosmological_simulation: ' +
+                       f'{self.cosmological_simulation}\n')
+            file.write(f'current_redshift: {self.current_redshift}\n')
+            file.write(f'omega_lambda: {self.omega_lambda}\n')
+            file.write(f'omega_matter: {self.omega_matter}\n')
+            file.write(f'omega_radiation: {self.omega_radiation}\n')
+            file.write(f'hubble_constant: {self.hubble_constant}\n')
+
+
+        # TODO
+        '''
+        column_headers = ['current_time', 'domain_dimensions',
+                          'domain_left_edge', 'domain_right_edge',
+                          'cosmological_simulation', 'current_redshift',
+                          'omega_lambda', 'omega_matter',
+                          'omega_radiation', 'hubble_constant']
+        
+        info_arr = [self.current_time, self.domain_dimensions,
+                    self.domain_left_edge, self.domain_right_edge,
+                    self.cosmological_simulation, self.current_redshift,
+                    self.omega_lambda, self.omega_matter,
+                    self.omega_radiation, self.hubble_constant]
+
+        file_path = os.path.join(self.directory, 
+                                f'{self.output_file}_sim_info.txt')
+
+        self.save_array_with_headers(file_path, info_arr, self.lines)
+        '''
+
+        # Copy information files from data folder to analysis
+        info_files = [
+            os.path.join(self.file_dir, f'header_{self.output_file}.txt'),
+            os.path.join(self.file_dir, 'hydro_file_descriptor.txt'),
+            os.path.join(self.file_dir, f'info_{self.output_file}.txt'),
+            os.path.join(self.file_dir, f'info_rt_{self.output_file}.txt'),
+            os.path.join(self.file_dir, 'namelist.txt')
+        ]
+
+        for info_file in info_files:
+            shutil.copy2(info_file, self.directory)
+
+
+    def save_sim_field_info(self, ds, sp):
+        '''
+        Save min, max, mean, and aggregate of each field in fields array.
+
+        Parameters:
+        ds: RAMSES data loaded into yt.
+        TODO ad
+        '''
+        # TODO ion-param to ion_param
+
+        fields = [
+            ('gas', 'temperature'),
+            ('gas', 'density'),
+            ('gas', 'number_density'),
+            ('gas', 'my_temperature'),
+            ('gas', 'ion-param'),
+            ('gas', 'Metallicity')
+        ]
+
+        for line in self.lines:
+            fields.append(('gas', 'flux_'  + line))
+            fields.append(('gas', 'luminosity_'  + line))
+
+        # Calculate desired quantities for each field
+        field_info = []
+
+        for field in fields:
+            min = sp.min(field)
+            max = sp.max(field)
+            mean = sp.mean(field)
+            agg = sp.quantities.total_quantity(field)
+
+            field_info.append((min, max, mean, agg))
+
+        # Save data to a file
+        file_path = os.path.join(self.directory, 
+                                f'{self.output_file}_field_info.txt')
+        
+        with open(file_path, 'w') as file:
+            for i, field in enumerate(fields):
+                file.write(f'{field}_min: {fields[i][0]}\n')
+                file.write(f'{field}_max: {fields[i][1]}\n')
+                file.write(f'{field}_mean: {fields[i][2]}\n')
+                file.write(f'{field}_agg: {fields[i][3]}\n')
+
+        '''
+        Reading the data file example:
+
+        Regex Pattern for float: r'[-+]?\d*\.\d+([eE][-+]?\d+)?'
+        Scientific Notation Possible
+
+        import re
+
+        with open('data.txt', 'r') as file:
+            file_content = file.read()
+
+        temp_min_pattern = fr'{field}_min: [-+]?\d*\.\d+([eE][-+]?\d+)?'
+
+        temp_min = float(re.search(temp_min_pattern, file_content).group(1)) 
+        '''
+
+
+
 
 
 '''
@@ -366,11 +559,17 @@ def plot_intensities(ds, sp, data_file, center, width, lims_dict=None):
     slc_halpha = slc_plot(ds, (width, 'pc'), center, ('gas', 'intensity_H1_6562.80A'))
     convert_to_plt_2(data_file, slc_halpha, 'slc', 'intensity_H1_6562.80A', width, redshift, r'H$\alpha$ 6562.80A Flux [$erg\: s^{-1}\: cm^{-2}$]')
 '''
-    
+
+
+
+
+
+# TODO
 '''
 Plot Spectra at simulated wavelengths
 '''
 
+'''
 def spectra_driver(ds, luminosities, data_file, linear=False):
     z = ds.current_redshift
     omega_matter = ds.omega_matter
@@ -502,10 +701,10 @@ def plot_voigts(centers, amplitudes, sigmas, gammas, noise_lvl, pad):
     return x_range, y_vals
 
 
-'''
+
 Star + Gas Plot
 Adapted from work by Sarunyapat Phoompuang
-'''
+
 
 def star_gas_overlay(ds, ad, sp, data_file, center, width, field, lims_dict=None):
     redshift = ds.current_redshift
@@ -617,10 +816,13 @@ def star_gas_overlay(ds, ad, sp, data_file, center, width, field, lims_dict=None
     plt.savefig(fname=overlay_fname)
     plt.close()
 
+'''
 
+# sp.quantities.center_of_mass(use_gas=False, use_particles=True, particle_type="star")
 
 
 # TODO 1D Profile Plots, Phase Plots
 # Save header information to a text file
 # Save lines and wavelengths
 # Save mins, maxs, means
+# TODO cloudy run
