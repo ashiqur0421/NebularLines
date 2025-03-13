@@ -54,7 +54,7 @@ class VisualizationManager:
         '''
         
         Parameters:
-        filename (str): filepath to the RAMSES-RT output_* folder
+        filename (str): filepath to the RAMSES-RT output_*/info_*.txt file
         lines (List, strings): List of nebular emission lines
         wavelengths (List, floats): List of corresponding wavelengths
 
@@ -65,18 +65,26 @@ class VisualizationManager:
 
         '''
 
+        
         self.filename = filename
         self.file_dir = os.path.dirname(self.filename)
         self.lines = lines
         self.wavelengths = wavelengths
-        self.output_file = self.filename.split('/')[-1]
+        self.output_file = self.file_dir.split('/')[-1]
         self.sim_run = self.output_file.split('_')[1]
-        self.info_file = f'{self.filename}/info_{self.sim_run}.txt'
+        #self.info_file = f'{self.file_dir}/info_{self.sim_run}.txt'
 
+        # Analysis directory for saving
         self.directory = f'analysis/{self.output_file}_analysis'
 
         if not os.path.exists(self.directory):
             os.makedirs(self.directory)
+
+        print(f'Filename = {self.filename}')
+        print(f'File Directory = {self.file_dir}')
+        print(f'Output File = {self.output_file}')
+        print(f'Simulation Run = {self.sim_run}')
+        print(f'Analysis Directory = {self.directory}')
 
     
     # Find center of mass of star particles
@@ -189,7 +197,7 @@ class VisualizationManager:
 
         lbox = width[0]
         length_unit = width[1]
-        field_comma = field.replace('.', ',')
+        field_comma = field[1].replace('.', ',')
 
         plot_title = f'{self.output_file}_{lbox}{length_unit}_' + \
             f'{field_comma}_{plot_type}'
@@ -241,6 +249,8 @@ class VisualizationManager:
         plt.text(0.05, 0.05, f'z = {redshift:.5f}', color='white', fontsize=9,
                  ha='left', va='bottom', transform=plt.gca().transAxes)
         # TODO font
+
+        # TODO print
 
         # Save the figure
         plt.savefig(fname, dpi=300)
@@ -407,16 +417,16 @@ class VisualizationManager:
         '''
 
         # Copy information files from data folder to analysis
-        info_files = [
-            os.path.join(self.file_dir, f'header_{self.output_file}.txt'),
+        sim_info_files = [
+            os.path.join(self.file_dir, f'header_{self.sim_run}.txt'),
             os.path.join(self.file_dir, 'hydro_file_descriptor.txt'),
-            os.path.join(self.file_dir, f'info_{self.output_file}.txt'),
-            os.path.join(self.file_dir, f'info_rt_{self.output_file}.txt'),
+            os.path.join(self.file_dir, f'info_{self.sim_run}.txt'),
+            os.path.join(self.file_dir, f'info_rt_{self.sim_run}.txt'),
             os.path.join(self.file_dir, 'namelist.txt')
         ]
 
-        for info_file in info_files:
-            shutil.copy2(info_file, self.directory)
+        for sim_info_file in sim_info_files:
+            shutil.copy2(sim_info_file, self.directory)
 
 
     def save_sim_field_info(self, ds, sp):
@@ -435,7 +445,7 @@ class VisualizationManager:
             ('gas', 'number_density'),
             ('gas', 'my_temperature'),
             ('gas', 'ion-param'),
-            ('gas', 'Metallicity')
+            ('gas', 'metallicity')
         ]
 
         for line in self.lines:

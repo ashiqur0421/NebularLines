@@ -1,5 +1,6 @@
 import os
 import sys
+import copy
 
 import numpy as np
 import yt
@@ -36,8 +37,9 @@ Setup fields in yt
 '''
 
 # Specify output_* folder
-filename = sys.argv[1]
-print(f'Line List Filepath = {filename}')
+#filename = sys.argv[1]
+#print(f'Line List Filepath = {filename}')
+filename = "/Users/bnowicki/Documents/Research/Ricotti/output_00273/info_00273.txt"
 
 # f1 = "/Users/bnowicki/Documents/Research/Ricotti/output_00273/info_00273.txt"
 # Cloudy Grid Run Bounds for this line list (log values)
@@ -116,7 +118,7 @@ def _my_temperature(field, data):
     mu=(yHI+yHII+2.*yH2 + 4.*yHe) / (yHI+yHII+yH2 + yHe + yel)
     return pr/dn * mu * mH_RAMSES / kB_RAMSES
 
-'''
+
 # TODO see if it works in emission.py
 # Luminosity field
 # Cloudy Intensity obtained assuming height = 1cm
@@ -124,9 +126,9 @@ def _my_temperature(field, data):
 # Multiply intensity at each pixel by volume of pixel -> luminosity
 def get_luminosity(line):
    def _luminosity(field, data):
-      return data['gas', 'intensity_' + line]*data['gas', 'volume']
+      return data['gas', 'flux_' + line]*data['gas', 'volume']
    return copy.deepcopy(_luminosity)
-'''
+
 
 '''
 Add derived fields.
@@ -176,6 +178,7 @@ for i, line in enumerate(lines):
     yt.add_field(
         ('gas', 'luminosity_' + line),
         function=emission_interpolator.get_luminosity(lines[i]),
+        #function=get_luminosity(lines[i]),
         sampling_type='cell',
         units='1/cm**3',
         force_override=True
@@ -192,6 +195,8 @@ Run routines on data
 ds = yt.load(filename, extra_particle_fields=epf)
 ad = ds.all_data()
 
+print(ds.field_list)
+
 viz = galaxy_visualization.VisualizationManager(filename, lines, wavelengths)
 star_ctr = viz.star_center(ad)
 sp = ds.sphere(star_ctr, (3000, "pc"))
@@ -206,7 +211,7 @@ field_list = [
     ('gas', 'number_density'),
     ('gas', 'my_temperature'),
     ('gas', 'ion-param'),
-    ('gas', 'Metallicity')
+    ('gas', 'metallicity')
 ]
 
 weight_field_list = [
@@ -244,11 +249,11 @@ for line in lines:
     weight_field_list.append(None)
 
 
+viz.save_sim_info(ds)
 viz.plot_wrapper(ds, sp, width, star_ctr, field_list,
-                     weight_field_list, title_list, proj=True, slc=True)
+                     weight_field_list, title_list, proj=True, slc=False)
 
 #viz.calc_luminosities(sp)
-viz.save_sim_info(ds)
 
 
 
@@ -380,3 +385,5 @@ sim_diagnostics(ds, sp, sim_run, width)
 
 #maxT = ad.max(('gas', 'temperature'))'
 '''
+
+# TODO checkerboard

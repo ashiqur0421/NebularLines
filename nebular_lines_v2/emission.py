@@ -185,8 +185,8 @@ class EmissionLineInterpolator:
             # Change to log values
             U_val = data['gas', 'ion-param'].value
             N_val = data['gas', 'number_density'].value
-            T_val = data['gas', 'temperature'].value
-            #T_val = data['gas', 'my_temperature'].value
+            #T_val = data['gas', 'temperature'].value
+            T_val = data['gas', 'my_temperature'].value
             # TODO my_temperature
 
             # Truncate negative temperatures
@@ -221,7 +221,7 @@ class EmissionLineInterpolator:
 
             # TODO check metallicity: mult by 4? solar metallicity?
             if idx not in [0, 10]:
-                interp_val = interp_val * data['gas', 'Metallicity']
+                interp_val = interp_val * data['gas', 'metallicity']
 
             if dens_normalized:
                 interp_val = interp_val * data['gas', 'number_density'] ** 2
@@ -245,6 +245,6 @@ class EmissionLineInterpolator:
         '''
 
         def _luminosity(field, data):
-            return data['gas', 'intensity_' + line]*data['gas', 'volume']
+            return data['gas', 'flux_' + line]*data['gas', 'volume']
         return copy.deepcopy(_luminosity)
 
