@@ -51,12 +51,13 @@ filename = "/Users/bnowicki/Documents/Research/Ricotti/output_00273/info_00273.t
 lines=["H1_6562.80A","O1_1304.86A","O1_6300.30A","O2_3728.80A","O2_3726.10A",
        "O3_1660.81A","O3_1666.15A","O3_4363.21A","O3_4958.91A","O3_5006.84A", 
        "He2_1640.41A","C2_1335.66A","C3_1906.68A","C3_1908.73A","C4_1549.00A",
-       "Mg2_2795.53A","Mg2_2802.71A","Ne3_3868.76A","Ne3_3967.47A","N5_1238.82A",
+       "Mg2_2795.53A","Mg2_2802.71A","Ne3_3868.76A","Ne3_3967.47A",
+       "N5_1238.82A",
        "N5_1242.80A","N4_1486.50A","N3_1749.67A","S2_6716.44A","S2_6730.82A"]
 
-wavelengths=[6562.80, 1304.86, 6300.30, 3728.80, 3726.10, 1660.81, 1666.15, \
-             4363.21, 4958.91, 5006.84, 1640.41, 1335.66, \
-             1906.68, 1908.73, 1549.00, 2795.53, 2802.71, 3868.76, \
+wavelengths=[6562.80, 1304.86, 6300.30, 3728.80, 3726.10, 1660.81, 1666.15,
+             4363.21, 4958.91, 5006.84, 1640.41, 1335.66,
+             1906.68, 1908.73, 1549.00, 2795.53, 2802.71, 3868.76,
              3967.47, 1238.82, 1242.80, 1486.50, 1749.67, 6716.44, 6730.82]
 
 
@@ -67,7 +68,6 @@ cell_fields = [
     "z-velocity",
     "Pressure",
     "Metallicity",
-    # "dark_matter_density",
     "xHI",
     "xHII",
     "xHeII",
@@ -98,6 +98,7 @@ def _ion_param(field, data):
     photon = pd_2 + pd_3 + pd_4
 
     return photon/data['gas', 'number_density']
+
 
 def _my_temperature(field, data):
     #y(i): abundance per hydrogen atom
@@ -130,13 +131,41 @@ def get_luminosity(line):
    return copy.deepcopy(_luminosity)
 
 
+#number density of hydrogen atoms
+def _my_H_nuclei_density(field, data):
+    dn=data["ramses","Density"].in_cgs()
+    XH_RAMSES=0.76 #defined by RAMSES in cooling_module.f90
+    YHE_RAMSES=0.24 #defined by RAMSES in cooling_module.f90
+    mH_RAMSES=yt.YTArray(1.6600000e-24,"g") #defined by RAMSES in cooling_module.f90
+
+    return dn*XH_RAMSES/mH_RAMSES
+
+'''
+def _pressure(field, data):
+    # TODO change to ds.add_field?
+    #if 'hydro_thermal_pressure' in dir(ds.fields.ramses):
+    return data['ramses', 'hydro_thermal_pressure']
+
+def _xHI(field, data):
+    return data['ramses', 'hydro_xHI']
+
+def _xHII(field, data):
+    return data['ramses', 'hydro_xHII']
+
+def _xHeII(field, data):
+    return data['ramses', 'hydro_xHeII']
+
+def _xHeIII(field, data):
+    return data['ramses', 'hydro_xHeIII']
+'''
+    
 '''
 Add derived fields.
 '''
 
 # Ionization parameter
 yt.add_field(
-    ('gas', 'ion-param'),
+    ('gas', 'ion_param'),
     function=_ion_param,
     sampling_type="cell",
     units="cm**3",
@@ -147,9 +176,71 @@ yt.add_field(
     ("gas","my_temperature"),
     function=_my_temperature,
     sampling_type="cell",
-    units="K",
+    # TODO units
+    #units="K",
+    #units="K*cm**3/erg",
+    units='K*cm*dyn/erg',
     force_override=True
 )
+
+yt.add_field(
+    ("gas","my_H_nuclei_density"),
+    function=_my_H_nuclei_density,
+    sampling_type="cell",
+    units="1/cm**3",
+    force_override=True
+)
+
+yt.add_field(
+    ("gas","number_density"),
+    function=_my_H_nuclei_density,
+    sampling_type="cell",
+    units="1/cm**3",
+    force_override=True
+)
+
+'''
+yt.add_field(
+    ("ramses","Pressure"),
+    function=_pressure,
+    sampling_type="cell",
+    units="1",
+    force_override=True
+)
+
+yt.add_field(
+    ("ramses","xHI"),
+    function=_xHI,
+    sampling_type="cell",
+    units="1",
+    force_override=True
+)
+
+yt.add_field(
+    ("ramses","xHII"),
+    function=_xHII,
+    sampling_type="cell",
+    units="1",
+    force_override=True
+)
+
+yt.add_field(
+    ("ramses","xHeII"),
+    function=_xHeII,
+    sampling_type="cell",
+    units="1",
+    force_override=True
+)
+
+yt.add_field(
+    ("ramses","xHeIII"),
+    function=_xHeIII,
+    sampling_type="cell",
+    units="1",
+    force_override=True
+)
+'''
+
 
 # Normalize by Density Squared Flag
 dens_normalized = True
@@ -206,27 +297,27 @@ width = (1500, 'pc')
 sim_run = filename.split('/')[-1]
 
 field_list = [
-    ('gas', 'temperature'),
+    #('gas', 'temperature'),
     ('gas', 'density'),
-    ('gas', 'number_density'),
+    ('gas', 'my_H_nuclei_density'),
     ('gas', 'my_temperature'),
-    ('gas', 'ion-param'),
+    ('gas', 'ion_param'),
     ('gas', 'metallicity')
 ]
 
 weight_field_list = [
-    ('gas', 'number_density'),
-    ('gas', 'number_density'),
-    ('gas', 'number_density'),
-    ('gas', 'number_density'),
-    ('gas', 'number_density'),
-    ('gas', 'number_density')
+    #('gas', 'my_H_nuclei_density'),
+    ('gas', 'my_H_nuclei_density'),
+    ('gas', 'my_H_nuclei_density'),
+    ('gas', 'my_H_nuclei_density'),
+    ('gas', 'my_H_nuclei_density'),
+    ('gas', 'my_H_nuclei_density')
 ]
 
 title_list = [
-    'Temperature [K]',
-    r'Density [$g\: cm^{-3}$]',
-    r'Number Density [$cm^{-3}$]',
+    #'Temperature [K]',
+    r'Density [g\: cm$^{-3}$]',
+    r'H Nuclei Number Density [cm$^{-3}$]',
     'My Temperature [K]',
     'Ionization Parameter',
     'Metallicity'
@@ -386,4 +477,6 @@ sim_diagnostics(ds, sp, sim_run, width)
 #maxT = ad.max(('gas', 'temperature'))'
 '''
 
-# TODO checkerboard
+# TODO phase plots
+# TODO check other data saving
+# TODO spectra

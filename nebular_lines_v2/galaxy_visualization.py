@@ -58,11 +58,11 @@ class VisualizationManager:
         lines (List, strings): List of nebular emission lines
         wavelengths (List, floats): List of corresponding wavelengths
 
+        file_dir (str): filepath to output directory
         output_file (str): output folder, e.g. output_00273
         sim_run (str): Time slice number for simulation eg. 00273
         info_file (str): Filename with info file appended '/info_00273.txt'
-        TODO directory
-
+        directory (str): analysis output directory
         '''
 
         
@@ -219,6 +219,15 @@ class VisualizationManager:
             # Clip values below 1e-10
             p_img = np.clip(p_img, a_min=1e-10, a_max=None)
 
+        # Replace NaN with 0 and Inf with finite numbers
+        if np.any(np.isnan(p_img)) or np.any(np.isinf(p_img)):
+            print('Warning: Data contains NaN or Inf values. ' +
+                  'Replacing with 0.')
+            p_img = np.nan_to_num(p_img)
+
+        # TODO
+        #p_img = gaussian_filter(p_img, sigma=1)
+
         # Set the extent of the plot
         extent_dens = [-lbox / 2, lbox / 2, -lbox / 2, lbox / 2]
 
@@ -232,9 +241,13 @@ class VisualizationManager:
 
         # Viridis, Inferno, Magma maps work - perceptually uniform
         fig = plt.figure(figsize=(8, 6))
+        #im = plt.imshow(p_img, norm=dens_norm, extent=extent_dens, 
+        #                origin='lower', aspect='auto', 
+        #                interpolation='bilinear', cmap='viridis')
+
         im = plt.imshow(p_img, norm=dens_norm, extent=extent_dens, 
-                        origin='lower', aspect='auto', 
-                        interpolation='bilinear', cmap='viridis')
+                        origin='lower', aspect='equal', 
+                        interpolation='nearest', cmap='viridis')
 
         plt.xlabel(f'X [{length_unit}]', fontsize=12)
         plt.ylabel(f'Y [{length_unit}]', fontsize=12)
@@ -306,6 +319,29 @@ class VisualizationManager:
                                         title_list[i], 
                                         lims_dict[lims_titles[i]])
                     
+
+    def phase_plot(self, ds, sp, x_field, y_field):
+        extrema = {("gas", "number_density"): (1e-4, 1e4), ("gas", "temperature"): (1e3, 1e8)}
+
+        profile = yt.create_profile(
+            sp,
+            [("gas", "temperature"), ("gas", "number_density")],
+            #n_bins=[128, 128],
+            fields=[("gas", "flux_H1_6562.80A")],
+            weight_field=None,
+            #units=units,
+            extrema=extrema,
+        )
+
+        plot = yt.PhasePlot.from_profile(profile)
+
+        plot_frb = yt_plot.frb
+        # TODO check below
+        #p_img = np.array(plot_frb['gas', field])
+        p_img = np.array(plot_frb[field[0], field[1]])
+        
+
+
     
     def save_array_with_headers(self, filename, array, headers, delimiter=','):
         '''
@@ -437,14 +473,14 @@ class VisualizationManager:
         ds: RAMSES data loaded into yt.
         TODO ad
         '''
-        # TODO ion-param to ion_param
 
         fields = [
             ('gas', 'temperature'),
             ('gas', 'density'),
-            ('gas', 'number_density'),
+            #('gas', 'number_density'),
+            ('gas', 'my_H_nuclei_density'),
             ('gas', 'my_temperature'),
-            ('gas', 'ion-param'),
+            ('gas', 'ion_param'),
             ('gas', 'metallicity')
         ]
 

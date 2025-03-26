@@ -183,11 +183,11 @@ class EmissionLineInterpolator:
             interpolator = self.get_interpolator(idx, dens_normalized)
 
             # Change to log values
-            U_val = data['gas', 'ion-param'].value
-            N_val = data['gas', 'number_density'].value
+            U_val = data['gas', 'ion_param'].value
+            #N_val = data['gas', 'number_density'].value
+            N_val = data['gas', 'my_H_nuclei_density'].value
             #T_val = data['gas', 'temperature'].value
             T_val = data['gas', 'my_temperature'].value
-            # TODO my_temperature
 
             # Truncate negative temperatures
             # Temperature is a derived/calculated field; there are some
@@ -224,10 +224,10 @@ class EmissionLineInterpolator:
                 interp_val = interp_val * data['gas', 'metallicity']
 
             if dens_normalized:
-                interp_val = interp_val * data['gas', 'number_density'] ** 2
+                interp_val = interp_val * data['gas', 'my_H_nuclei_density'] ** 2
             else:
-                interp_val = interp_val * data['gas', 'number_density'] / \
-                    data['gas', 'number_density']
+                interp_val = interp_val * data['gas', 'my_H_nuclei_density'] / \
+                    data['gas', 'my_H_nuclei_density']
 
             return interp_val
         return copy.deepcopy(_line_emission)
