@@ -320,14 +320,38 @@ class VisualizationManager:
                                         lims_dict[lims_titles[i]])
                     
 
-    def phase_plot(self, ds, sp, x_field, y_field):
-        extrema = {("gas", "number_density"): (1e-4, 1e4), ("gas", "temperature"): (1e3, 1e8)}
+    def phase_plot(self, ds, sp, x_field, y_field, z_field, extrema,
+                   x_label, y_label, z_label):
+        '''
+        Generate a phase plot.
+        
+        Parameters:
+        ds: loaded RAMSES-RT data set
+        sp: sphere data object to project within
+        x_field (tuple, str): field to plot on the x-axis, i.e.
+            ('gas', 'my_H_nuclei_density')
+        y_field (tuple, str): field to plot on the y-axis, i.e.
+            ('gas', 'my_temperature')
+        z_field (tuple, str): field to plot with colormap, i.e.
+            ('gas', 'flux_H1_6562.80A')
+        extrema (dict): Dictionary specifying the extrema of the plot, i.e.
+            extrema = {('gas', 'my_H_nuclei_density'): (1e-4, 1e4), 
+                            ('gas', 'my_temperature'): (1e3, 1e8)}
+        x_label (str): label for x-axis
+        y_label (str): label for y-axis
+        z_label (str): label for colorbar
+        '''
+
+        plot_title = f'{self.output_file}_' + \
+            f'{x_field[1]}_{y_field[1]}_{z_field[1]}_phase.png'
+
+        fname = os.path.join(self.directory, plot_title)
 
         profile = yt.create_profile(
             sp,
-            [("gas", "temperature"), ("gas", "number_density")],
+            [x_field, y_field],
             #n_bins=[128, 128],
-            fields=[("gas", "flux_H1_6562.80A")],
+            fields=[z_field],
             weight_field=None,
             #units=units,
             extrema=extrema,
@@ -335,13 +359,16 @@ class VisualizationManager:
 
         plot = yt.PhasePlot.from_profile(profile)
 
-        plot_frb = yt_plot.frb
-        # TODO check below
-        #p_img = np.array(plot_frb['gas', field])
-        p_img = np.array(plot_frb[field[0], field[1]])
-        
+        plot.set_colorbar_label(z_field, z_label)
+        plot.render()
 
-
+        # Get a reference to the matplotlib axes object for the plot
+        ax = plot.plots[z_field[0], z_field[1]].axes
+        fig = plot.plots[z_field[0], z_field[1]].figure
+        ax.set_xlabel(x_label)
+        ax.set_ylabel(y_label)
+        plot.save(fname)
+    
     
     def save_array_with_headers(self, filename, array, headers, delimiter=','):
         '''
@@ -492,10 +519,14 @@ class VisualizationManager:
         field_info = []
 
         for field in fields:
-            min = sp.min(field)
-            max = sp.max(field)
-            mean = sp.mean(field)
-            agg = sp.quantities.total_quantity(field)
+            min = sp.min(field).value
+            print(f'{field}_min: {min}')
+            max = sp.max(field).value
+            print(f'{field}_min: {max}')
+            mean = sp.mean(field).value
+            print(f'{field}_min: {mean}')
+            agg = sp.quantities.total_quantity(field).value
+            print(f'{field}_min: {agg}')
 
             field_info.append((min, max, mean, agg))
 
@@ -505,10 +536,10 @@ class VisualizationManager:
         
         with open(file_path, 'w') as file:
             for i, field in enumerate(fields):
-                file.write(f'{field}_min: {fields[i][0]}\n')
-                file.write(f'{field}_max: {fields[i][1]}\n')
-                file.write(f'{field}_mean: {fields[i][2]}\n')
-                file.write(f'{field}_agg: {fields[i][3]}\n')
+                file.write(f'{field}_min: {field_info[i][0]}\n')
+                file.write(f'{field}_max: {field_info[i][1]}\n')
+                file.write(f'{field}_mean: {field_info[i][2]}\n')
+                file.write(f'{field}_agg: {field_info[i][3]}\n')
 
         '''
         Reading the data file example:
@@ -872,3 +903,4 @@ def star_gas_overlay(ds, ad, sp, data_file, center, width, field, lims_dict=None
 # Save lines and wavelengths
 # Save mins, maxs, means
 # TODO cloudy run
+# TODO change z label on plots annotation, sig figs

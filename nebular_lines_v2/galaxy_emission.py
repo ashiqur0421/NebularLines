@@ -47,7 +47,6 @@ filename = "/Users/bnowicki/Documents/Research/Ricotti/output_00273/info_00273.t
 # Nmin, Nmax, Nstep: -1.0 6.0 0.5
 # Tmin, Tmax, Tstop: 3.0 6.0 0.1
 
-# TODO H2
 lines=["H1_6562.80A","O1_1304.86A","O1_6300.30A","O2_3728.80A","O2_3726.10A",
        "O3_1660.81A","O3_1666.15A","O3_4363.21A","O3_4958.91A","O3_5006.84A", 
        "He2_1640.41A","C2_1335.66A","C3_1906.68A","C3_1908.73A","C4_1549.00A",
@@ -316,7 +315,7 @@ weight_field_list = [
 
 title_list = [
     #'Temperature [K]',
-    r'Density [g\: cm$^{-3}$]',
+    r'Density [g cm$^{-3}$]',
     r'H Nuclei Number Density [cm$^{-3}$]',
     'My Temperature [K]',
     'Ionization Parameter',
