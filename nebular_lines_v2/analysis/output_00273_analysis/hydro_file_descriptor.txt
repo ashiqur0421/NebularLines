@@ -1,12 +1,13 @@
-nvar        =         11
-variable # 1: density
-variable # 2: velocity_x
-variable # 3: velocity_y
-variable # 4: velocity_z
-variable # 5: thermal_pressure
-variable # 6: Metallicity
-variable # 7: xHI
-variable # 8: xHII
-variable # 9: xHeII
-variable #10: xHeIII
-variable #11: refinement_param
+# version:  1
+# ivar, variable_name, variable_type
+ 1, density, d
+ 2, velocity_x, d
+ 3, velocity_y, d
+ 4, velocity_z, d
+ 5, pressure, d
+ 6, metallicity, d
+ 7, xHI, d
+ 8, xHII, d
+ 9, xHeII, d
+10, xHeIII, d
+11, refinement-param, i

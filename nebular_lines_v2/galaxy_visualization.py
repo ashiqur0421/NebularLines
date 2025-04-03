@@ -27,8 +27,6 @@ Visualization and analysis routines for RAMSES-RT Simulations.
 Projection, Slice Plot Routines
 '''
 
-# TODO docstrings
-
 # Cloudy Grid Run Bounds (log values)
 # Umin, Umax, Ustep: -6.0 1.0 0.5
 # Nmin, Nmax, Nstep: -1.0 6.0 0.5 
@@ -240,6 +238,7 @@ class VisualizationManager:
 
 
         # Viridis, Inferno, Magma maps work - perceptually uniform
+        # TODO figsize, dpi
         fig = plt.figure(figsize=(8, 6))
         #im = plt.imshow(p_img, norm=dens_norm, extent=extent_dens, 
         #                origin='lower', aspect='auto', 
@@ -415,9 +414,13 @@ class VisualizationManager:
         #np.savetxt(lum_file_path, luminosities, delimeter=',', 
         #           header=emission_line_str)
 
-        self.save_array_with_headers(lum_file_path, luminosities, self.lines)
+        #self.save_array_with_headers(lum_file_path, luminosities, self.lines)
         
         self.luminosities = luminosities
+
+        with open(lum_file_path, 'w') as file:
+            for i, line in enumerate(self.lines):
+                file.write(f'{line} Luminosity: {self.luminosities[i]}\n')
 
         return luminosities
     
@@ -557,6 +560,243 @@ class VisualizationManager:
         temp_min = float(re.search(temp_min_pattern, file_content).group(1)) 
         '''
 
+    def plot_cumulative_field(self, ds, sp, width, center, field,
+                              weight_field, title, fname):
+        '''
+        Flatten and order the values in an image of a field 
+
+        Parameters:
+        -----------
+        ds: loaded RAMSES-RT data set
+        sp: sphere data object to project within
+        center (List, float): center (array of 3 values) in code units
+        width (tuple, int and str): width in code units or formatted with 
+            units, e.g. (1500, 'pc')
+        field (tuple, str): list of fields to plot, e.g. 
+            ('gas', 'temperature')
+        weight_field (tuple, str): list of fields to weight 
+            projections (or None if unweighted)
+        title (str): title
+        fname (str): figure name
+        '''
+
+        p = self.proj_plot(ds, sp, width, center, field, weight_field)
+        
+
+        plot_frb = p.frb
+        p_img = np.array(plot_frb[field[0], field[1]])
+
+        im_sorted = np.sort(p_img, axis=None)[::-1]
+        idxs = np.arange(0, len(im_sorted), 1)
+
+        fig = plt.figure(figsize=(8, 6))
+        plt.xlabel('Index')
+        plt.ylabel('Cumulative Value')
+        plt.title(f'{title} Cumulative Sum')
+        plt.plot(idxs, np.cumsum(im_sorted))
+        plt.grid(True)
+        plt.savefig(os.path.join(self.directory, fname), dpi=300)
+        plt.close()
+
+
+    def spectra_driver(self, ds, resolving_power, noise_lvl,
+                       lum_lims=None, flux_lims=None, linear=False):
+        '''
+        Generate spectra.
+
+        Parameters:
+        -----------
+        ds: loaded RAMSES-RT data set
+        resolving_power (float): resolving power R = lambda/delta_lambda
+            for the observational system. i.e. R = 1000
+        noise_lvl (float): noise level/lower floor on signal, i.e. 10e-25
+        lum_lims (List, float): manual limits on the luminosity values,
+            i.e. lum_lims=[32, 44]
+        flux_lims (List, float): manual limits of the flux values
+            i.e. flux_lims=[-24, -19]
+        '''
+
+        cosmo = FlatLambdaCDM(H0=70, Om0=self.omega_matter)  # around 0.3
+        
+        # Mpc to cm
+        d_1 = cosmo.luminosity_distance(self.current_redshift)*3.086e24
+        self.flux_arr = (self.luminosities / (4 * np.pi * d_1 ** 2)).value
+
+        fname = os.path.join(self.directory, self.output_file)
+
+        # Raw spectra values
+        self.plot_spectra(noise_lvl, resolving_power, 1000,
+                          fname + '_raw_spectra', sim_spectra=False,
+                          redshift_wavelengths=False)
+
+        # Sim spectra, not redshifted
+        self.plot_spectra(noise_lvl, resolving_power, 1000,
+                          fname + '_sim_spectra', sim_spectra=True,
+                          redshift_wavelengths=False)
+
+        # Sim spectra, redshifted
+        self.plot_spectra(noise_lvl, resolving_power, 1000,
+                          fname + '_sim_spectra_redshifted', sim_spectra=True,
+                          redshift_wavelengths=True)
+
+
+        # With limits for animation
+        # Sim spectra, not redshifted
+        self.plot_spectra(noise_lvl, resolving_power, 1000,
+                          fname + '_sim_spectra', sim_spectra=True,
+                          redshift_wavelengths=False,
+                          lum_lims=lum_lims, flux_lims=flux_lims)
+
+        # Sim spectra, redshifted
+        self.plot_spectra(noise_lvl, resolving_power, 1000,
+                          fname + '_sim_spectra_redshifted', sim_spectra=True,
+                          redshift_wavelengths=True,
+                          lum_lims=lum_lims, flux_lims=flux_lims)
+
+
+    def plot_spectra(self, noise_lvl, resolving_power, pad, figname,
+                     sim_spectra=False, redshift_wavelengths=False,
+                     lum_lims=None, flux_lims=None, linear=False):
+        '''
+        Plot a spectrum with certain options.
+
+        Parameters:
+        -----------
+        noise_lvl (float): noise level/lower floor on signal
+        resolving_power (float): resolving power
+        pad (float): pad on wavelengths around each voigt profile, i.e. 1000A
+        figname (str): filename of figure
+        sim_spectra (bool): option to simulate spectra with voigt profiles.
+            If False values are plotted in a scatter plot.
+        redshift_wavelengths (bool): option to account for redshift in
+            wavelengths on the x-axis.
+        lum_lims (List, float): manual limits on the luminosity values
+        flux_lims (List, float): manual limits of the flux values
+        linear (bool): option to plot on linear rather than log y-axis
+        '''
+
+        wavelengths = self.wavelengths
+
+        # Display spectra at redshifted wavelengths
+        # lambda_obs = (1+z)*lambda_rest
+        if redshift_wavelengths:
+            wavelengths = (1 + self.redshift) * np.array(wavelengths)
+            pad *= 5
+
+        line_widths = np.array(wavelengths) / resolving_power  # Angstroms
+
+        if sim_spectra:
+            x_range, y_vals_f = self.plot_voigts(wavelengths, self.flux_arr,
+                                                 line_widths,
+                                                 [0.0]*len(wavelengths),
+                                                 noise_lvl, pad)
+            
+            fig, ax1 = plt.subplots(1)
+            
+            if not linear:
+                ax1.plot(x_range, np.log10(y_vals_f), color='black')
+            else:
+                ax1.plot(x_range, y_vals_f, color='black')
+
+            if flux_lims != None:
+                if not linear:
+                    ax1.set_ylim(flux_lims)
+                else:
+                    ax1.set_ylim([10**flux_lims[0], 10**flux_lims[1]])
+
+            ax1.set_xlabel(r'Wavelength [$\AA$]')
+            if not linear:
+                ax1.set_ylabel(
+                    r'Log(Flux) [$erg\: s^{-1}\: cm^{-2} \: \AA^{-1}]$'
+                )
+            else:
+                ax1.set_ylabel(r'Flux [$erg\: s^{-1}\: cm^{-2} \: \AA^{-1}]$')
+
+            flux_fname = figname + '_flux'
+            plt.savefig(flux_fname)
+            plt.close()
+
+            fig, ax1 = plt.subplots(1)
+            x_range, y_vals_l = self.plot_voigts(wavelengths, self.luminosities,
+                                                 line_widths,
+                                                 [0.0]*len(wavelengths),
+                                                 noise_lvl, pad)
+            
+            if not linear:
+                ax1.plot(x_range, np.log10(y_vals_l), color='black')
+            else:
+                ax1.plot(x_range, y_vals_l, color='black')
+
+            if lum_lims != None:
+                if linear == False:
+                    ax1.set_ylim(lum_lims)
+                else:
+                    ax1.set_ylim([10**lum_lims[0], 10**lum_lims[1]])
+
+            ax1.set_xlabel(r'Wavelength [$\AA$]')
+            if not linear:
+                ax1.set_ylabel(
+                    r'Log(Luminosity) [$erg\: s^{-1} \: \AA^{-1}]$'
+                )
+            else:
+                ax1.set_ylabel(r'Luminosity [$erg\: s^{-1} \: \AA^{-1}]$')
+
+            lum_fname = figname + '_lum'
+            plt.savefig(lum_fname)
+            plt.close()
+
+        else:
+            fig, (ax1, ax2) = plt.subplots(2, sharex=True)
+            ax1.plot(wavelengths, np.log10(self.flux_arr), 'o')
+            ax2.plot(wavelengths, np.log10(self.luminosities), 'o')
+            ax2.set_xlabel(r'Wavelength [$\AA$]')
+            ax1.set_ylabel(r'Log(Flux) [$erg\: s^{-1}\: cm^{-2}$]')
+            ax2.set_ylabel(r'Log(Luminosity) [$erg\: s^{-1}$]')
+            plt.savefig(figname)
+            plt.close()
+
+
+    def plot_voigts(self, centers, amplitudes, sigmas, gammas,
+                    noise_lvl, pad):
+        '''
+        Plot voigt profiles for spectral lines over a specified noise level.
+
+        Parameters:
+        -----------
+        All lists must be of same length.
+
+        centers (list, float): centers of voigt profiles
+        amplitudes (list, float): corresponding amplitudes (i.e.,
+            luminosities) for each profile
+        sigmas (list, float): list of associated standard deviations of
+            a normal distribution
+        gammas (list, float): list of associated FWHM of Cauchy distribution
+        noise_lvl (float): noise level/lower floor on signal
+        pad (float): pad on wavelengths around each voigt profile, i.e. 1000A
+
+        Returns:
+        ----------
+        x_range (array, float): array of x values (wavelengths)
+        y_vals (array, float): array of accumulated y values (i.e., the
+            sum of luminosities or fluxes from each voigt profile)
+        '''
+
+        # TODO noiseless profile, Poisson noise
+
+        x_range = np.linspace(min(centers) - pad, max(centers) + pad, 1000)
+        y_vals = np.zeros_like(x_range) + noise_lvl
+
+        for amp, center, sigma, gamma in \
+            zip(amplitudes, centers, sigmas, gammas):
+            y_vals += (amp) * voigt_profile(x_range - center, sigma, gamma)
+
+            #if amp > noise_lvl:
+                #y_vals += (amp-noise_lvl)*voigt_profile(x_range - center,
+                #   sigma, gamma) # - noise after no sub
+
+        #y_vals += noise_lvl
+
+        return x_range, y_vals
 
 
 
@@ -904,3 +1144,6 @@ def star_gas_overlay(ds, ad, sp, data_file, center, width, field, lims_dict=None
 # Save mins, maxs, means
 # TODO cloudy run
 # TODO change z label on plots annotation, sig figs
+# TODO docstrings
+# FITS images
+# TODO star density plot, star + gas
