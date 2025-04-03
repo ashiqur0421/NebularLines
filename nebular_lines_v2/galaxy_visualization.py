@@ -589,13 +589,19 @@ class VisualizationManager:
         im_sorted = np.sort(p_img, axis=None)[::-1]
         idxs = np.arange(0, len(im_sorted), 1)
 
+        # Normalized
+        cum_val = np.cumsum(im_sorted) / np.sum(im_sorted)
+
         fig = plt.figure(figsize=(8, 6))
         plt.xlabel('Index')
         plt.ylabel('Cumulative Value')
         plt.title(f'{title} Cumulative Sum')
-        plt.plot(idxs, np.cumsum(im_sorted))
+        plt.plot(idxs, cum_val)
         plt.grid(True)
-        plt.savefig(os.path.join(self.directory, fname), dpi=300)
+        plt.savefig(
+            os.path.join(self.directory,
+                         f'output_{self.output_file}_{fname}'), dpi=300
+        )
         plt.close()
 
 
