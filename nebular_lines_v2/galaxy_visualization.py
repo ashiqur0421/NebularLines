@@ -13,6 +13,7 @@ from astropy.cosmology import FlatLambdaCDM
 from matplotlib.colors import LogNorm
 import sys
 from scipy.ndimage import gaussian_filter
+from matplotlib.gridspec import GridSpec
 
 '''
 galaxy_visualization.py
@@ -188,7 +189,7 @@ class VisualizationManager:
             for image if desired; otherwise None
 
         Returns:
-        NA
+        p_img (ndarray, float): 2D numpy array containing the image data
 
         Saves desired figures with usable file naming scheme.
         '''
@@ -268,6 +269,8 @@ class VisualizationManager:
         plt.savefig(fname, dpi=300)
         plt.close()
 
+        return p_img
+
 
     def plot_wrapper(self, ds, sp, width, center, field_list,
                      weight_field_list, title_list, proj=True, slc=True,
@@ -276,6 +279,7 @@ class VisualizationManager:
         Wrapper for plotting a variety of fields simultaneously.
 
         Parameters:
+        -----------
         ds: loaded RAMSES-RT data set
         sp: sphere data object to project within
         center (List, float): center (array of 3 values) in code units
@@ -290,9 +294,15 @@ class VisualizationManager:
             colorbar values for image if desired; otherwise None
         lims_titles (List, str): titles associated with lims_dict for
             corresponding fields
+
+        Returns:
+        --------
+        p_img_arr (list, ndarray, float): list of 2D image arrays
         '''
 
         redshift = ds.current_redshift
+
+        p_img_arr = []
 
         for i, field in enumerate(field_list):
             if proj:
@@ -300,23 +310,30 @@ class VisualizationManager:
                                    weight_field_list[i])
                 
                 if lims_dict == None:
-                    self.convert_to_plt(p, 'proj', field, width, redshift,
-                                        'Projected ' + title_list[i])
+                    p_img = self.convert_to_plt(p, 'proj', field, width,
+                                                redshift,
+                                                'Projected ' + title_list[i])
                 else:
-                    self.convert_to_plt(p, 'proj', field, width, redshift,
-                                        'Projected ' + title_list[i], 
-                                        lims_dict[lims_titles[i]])
+                    p_img = self.convert_to_plt(p, 'proj', field, width,
+                                                redshift,
+                                                'Projected ' + title_list[i],
+                                                lims_dict[lims_titles[i]])
 
             if slc:
                 p = self.slc_plot(ds, width, center, field)
                 
                 if lims_dict == None:
-                    self.convert_to_plt(p, 'slc', field, width, redshift,
-                                        title_list[i])
+                    p_img = self.convert_to_plt(p, 'slc', field, width,
+                                                redshift,
+                                                title_list[i])
                 else:
-                    self.convert_to_plt(p, 'slc', field, width, redshift,
-                                        title_list[i], 
-                                        lims_dict[lims_titles[i]])
+                    p_img = self.convert_to_plt(p, 'slc', field, width,
+                                                redshift, title_list[i],
+                                                lims_dict[lims_titles[i]])
+                    
+            p_img_arr.append(p_img)
+        
+        return p_img_arr
                     
 
     def phase_plot(self, ds, sp, x_field, y_field, z_field, extrema,
@@ -325,6 +342,7 @@ class VisualizationManager:
         Generate a phase plot.
         
         Parameters:
+        -----------
         ds: loaded RAMSES-RT data set
         sp: sphere data object to project within
         x_field (tuple, str): field to plot on the x-axis, i.e.
@@ -339,7 +357,17 @@ class VisualizationManager:
         x_label (str): label for x-axis
         y_label (str): label for y-axis
         z_label (str): label for colorbar
+
+        Returns:
+        --------
+        phase_profile: profile associated with PhasePlot object
+            Can extract attributes
+        x_vals (ndarray, float): x values associated with phase plot
+        y_vals (ndarray, float): y values associated with phase plot
+        z_vals (ndarray, float): 2D z values associated with phase plot
         '''
+
+        # TODO add z extrema
 
         plot_title = f'{self.output_file}_' + \
             f'{x_field[1]}_{y_field[1]}_{z_field[1]}_phase.png'
@@ -348,6 +376,7 @@ class VisualizationManager:
 
         profile = yt.create_profile(
             sp,
+            #ds.all_data(), # TODO
             [x_field, y_field],
             #n_bins=[128, 128],
             fields=[z_field],
@@ -358,8 +387,20 @@ class VisualizationManager:
 
         plot = yt.PhasePlot.from_profile(profile)
 
+        phase_profile = plot.profile
+
         plot.set_colorbar_label(z_field, z_label)
         plot.render()
+
+        x_vals = phase_profile.x
+        y_vals = phase_profile.y
+        z_vals = phase_profile[z_field]  # alternatively field_data attr
+        #print(x_vals.shape)
+        #print(y_vals.shape)
+        #print(z_vals.shape)
+
+        #p_img = np.reshape(z_vals, (len(x_vals)-1, len(y_vals)-1))
+        # TODO may need to average in each bin
 
         # Get a reference to the matplotlib axes object for the plot
         ax = plot.plots[z_field[0], z_field[1]].axes
@@ -367,7 +408,194 @@ class VisualizationManager:
         ax.set_xlabel(x_label)
         ax.set_ylabel(y_label)
         plot.save(fname)
+
+        return (phase_profile, x_vals, y_vals, z_vals)
     
+    '''
+    def phase_with_profiles(self, ds, sp, phase_profile,
+                            x_field, y_field, z_field,
+                            x_vals, y_vals, z_vals, x_label, y_label,
+                            z_label):
+        
+        Generate a phase plot with additional profile plots.
+
+        Parameters:
+        -----------
+        ds: loaded RAMSES-RT data set
+        sp: sphere data object to project within
+        phase_profile: profile associated with PhasePlot object
+            Can extract attributes
+        x_field (tuple, str): field to plot on the x-axis, i.e.
+            ('gas', 'my_H_nuclei_density')
+        y_field (tuple, str): field to plot on the y-axis, i.e.
+            ('gas', 'my_temperature')
+        z_field (tuple, str): field to plot with colormap, i.e.
+            ('gas', 'flux_H1_6562.80A')
+        x_vals (ndarray, float): x values associated with phase plot
+        y_vals (ndarray, float): y values associated with phase plot
+        z_vals (ndarray, float): z values associated with phase plot
+        p_img (ndarray, float): 2D array of z values associated with
+            phase plot
+        x_label (str): label for x-axis
+        y_label (str): label for y-axis
+        z_label (str): label for colorbar
+
+        Returns:
+        --------
+        TODO
+        
+
+        plot_title = f'{self.output_file}_' + \
+            f'{x_field[1]}_{y_field[1]}_{z_field[1]}_phase_profile.png'
+
+        fname = os.path.join(self.directory, plot_title)
+
+        #print(x_vals.shape)
+        #print(y_vals.shape)
+        #print(z_vals.shape)
+        x_vals = np.log10(x_vals)
+        y_vals = np.log10(y_vals)
+        z_vals = np.log10(z_vals).transpose()
+
+        # Find the location of the peak z value (max of z_vals)
+        peak_z_idx = np.unravel_index(np.argmax(z_vals), z_vals.shape)[::-1]
+        #print(peak_z_idx)
+        peak_x = x_vals[peak_z_idx[0]]
+        peak_y = y_vals[peak_z_idx[1]]
+        peak_z = z_vals[peak_z_idx]
+
+        # Create the figure and gridspec layout
+        fig = plt.figure(figsize=(12, 8))
+        gs = GridSpec(4, 4, figure=fig)
+
+        # Central phase plot (imshow)
+        ax0 = fig.add_subplot(gs[1:4, 0:3])
+        cax = ax0.imshow(z_vals, origin="lower", aspect="auto",
+                         extent=(min(x_vals), max(x_vals), min(y_vals),
+                                 max(y_vals)))
+        ax0.set_xlabel(x_label)
+        ax0.set_ylabel(y_label)
+        #ax0.set_title(title)
+        ax0.scatter(peak_x, peak_y, color="red",
+                    label=f"Peak ({peak_x:.2f}, {peak_y:.2f}, {peak_z:.2f})")
+        ax0.legend(loc="upper right")
+
+        # Profile plot at the top (z vs x)
+        # averaging over y bins (along each x slice)
+        ax1 = fig.add_subplot(gs[0, 0:3])
+        avg_z_vals_x = np.mean(10 ** z_vals, axis=1)
+        ax1.plot(x_vals, np.log10(avg_z_vals_x), color="blue")
+        ax1.set_ylabel(z_label)
+
+        # Profile plot on the right (z vs y)
+        # Averaging over x bins (along each y slice)
+        ax2 = fig.add_subplot(gs[1:4, 3])
+        avg_z_vals_y = np.mean(10 ** z_vals, axis=0)
+        ax2.plot(np.log10(avg_z_vals_y), y_vals, color="blue")
+        ax2.set_xlabel(z_label)
+
+        # Adjust layout and position the colorbar
+        # Leave space on the right for colorbar
+        fig.tight_layout(rect=[0, 0, 0.9, 1])
+
+        # Add colorbar on the right side
+        fig.colorbar(cax, ax=ax0, orientation='vertical', label=z_label)
+
+        # Annotate the peak z value location
+        
+        ax0.annotate(f"Peak z: ({peak_x:.2f}, {peak_y:.2f}, {peak_z:.2f})", 
+                     xy=(peak_x, peak_y), xycoords='data', 
+                     xytext=(peak_x + 0.1, peak_y + 0.1), textcoords='data',
+                     arrowprops=dict(arrowstyle="->", color='red'),
+                     fontsize=10, color="black")
+        
+
+        plt.savefig(fname, dpi=300)
+        plt.close()
+    '''
+
+    
+    def phase_with_profiles(self, ds, sp, phase_profile,
+                        x_field, y_field, z_field,
+                        x_vals, y_vals, z_vals, x_label, y_label,
+                        z_label):
+        '''
+        Generate a phase plot with additional profile plots.
+        '''
+
+        plot_title = f'{self.output_file}_' + \
+            f'{x_field[1]}_{y_field[1]}_{z_field[1]}_phase_profile.png'
+
+        fname = os.path.join(self.directory, plot_title)
+
+        x_vals = np.log10(x_vals)
+        y_vals = np.log10(y_vals)
+        z_vals = np.log10(z_vals).transpose()
+
+        # Find the location of the peak z value (max of z_vals)
+        peak_z_idx = np.unravel_index(np.argmax(z_vals), z_vals.shape)[::-1]
+        peak_x = x_vals[peak_z_idx[0]]
+        peak_y = y_vals[peak_z_idx[1]]
+        peak_z = z_vals[peak_z_idx]
+
+        # Create the figure and gridspec layout
+        fig = plt.figure(figsize=(12, 8))
+        gs = GridSpec(4, 4, figure=fig)
+
+        # Central phase plot (imshow)
+        ax0 = fig.add_subplot(gs[1:4, 0:3])
+        cax = ax0.imshow(z_vals, origin="lower", aspect="auto",
+                         extent=(min(x_vals), max(x_vals), min(y_vals),
+                                 max(y_vals)))
+        ax0.set_xlabel(x_label)
+        ax0.set_ylabel(y_label)
+
+        # Add the red dot marking the peak
+        ax0.scatter(peak_x, peak_y, color="red",
+                    label=f"Peak ({peak_x:.2f}, {peak_y:.2f}, {peak_z:.2f})")
+        ax0.legend(loc="upper right")
+
+        # Profile plot at the top (z vs x)
+        # Averaging over y bins (along each x slice)
+        ax1 = fig.add_subplot(gs[0, 0:3], sharex=ax0)
+        avg_z_vals_x = np.mean(10 ** z_vals, axis=1)
+        ax1.plot(x_vals, np.log10(avg_z_vals_x), color="blue")
+
+        # Add red dot on the x-profile plot for the peak
+        ax1.scatter(peak_x, np.log10(avg_z_vals_x[np.argmax(z_vals[peak_z_idx[0], :])]), color="red", label=f"Peak ({peak_x:.2f})")
+        ax1.set_ylabel(z_label)
+
+        # Profile plot on the right (z vs y)
+        # Averaging over x bins (along each y slice)
+        ax2 = fig.add_subplot(gs[1:4, 3], sharey=ax0)
+        avg_z_vals_y = np.mean(10 ** z_vals, axis=0)
+        ax2.plot(np.log10(avg_z_vals_y), y_vals, color="blue")
+
+        # Add red dot on the y-profile plot for the peak
+        ax2.scatter(np.log10(avg_z_vals_y[np.argmax(z_vals[:, peak_z_idx[1]])]), peak_y, color="red", label=f"Peak ({peak_y:.2f})")
+        ax2.set_xlabel(z_label)
+
+        # Adjust the layout
+        fig.tight_layout(rect=[0, 0, 0.9, 1])
+
+        # Remove the ticks and labels from the borders of the phase plot
+        ax0.get_xaxis().set_ticks([])
+        ax0.get_yaxis().set_ticks([])
+
+        # Remove the ticks and labels on the profile axes that touch the phase plot
+        ax1.get_xaxis().set_ticks([])
+        ax1.get_yaxis().set_ticks([])
+
+        ax2.get_xaxis().set_ticks([])
+        ax2.get_yaxis().set_ticks([])
+
+        # Add colorbar on the right side
+        fig.colorbar(cax, ax=ax0, orientation='vertical', label=z_label)
+
+        # Save the figure
+        plt.savefig(fname, dpi=300)
+        plt.close()
+
     
     def save_array_with_headers(self, filename, array, headers, delimiter=','):
         '''

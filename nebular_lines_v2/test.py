@@ -352,6 +352,7 @@ viz.phase_plot(ds, sp, x_field=('gas', 'my_temperature'),
                       r' Luminosity [erg s$^{-1}$]')
 
 
+'''
 pix = sp[('gas', 'luminosity_H1_6562.80A')].value
 pix_sort = np.sort(pix, axis=None)[::-1]
 idxs = np.arange(0, len(pix_sort), 1)
@@ -365,6 +366,7 @@ plt.plot(idxs, cum_val)
 plt.grid(True)
 plt.show()
 plt.close()
+'''
 
 # width 1500 pc
 
@@ -379,3 +381,25 @@ plt.close()
 # 1D histogram
 # normalize value in colorbar
 # min and max - gradient in yellow part 
+
+
+extrema = {('gas', 'my_temperature'): (1e3, 1e8),
+           ('gas', 'my_H_nuclei_density'): (1e-4, 1e6)}
+
+line_title = r'H$\alpha$_6562.80A'
+
+phase_profile, x_vals, y_vals, z_vals = viz.phase_plot(ds, sp, x_field=('gas', 'my_temperature'),
+               y_field=('gas', 'my_H_nuclei_density'), z_field=('gas', 'flux_H1_6562.80A'),
+               extrema=extrema, x_label='Temperature [K]', 
+               y_label=r'H Nuclei Number Density [cm$^{-3}$]', 
+               z_label=line_title.replace('_', ' ') + 
+                      r' Flux [erg s$^{-1}$ cm$^{-2}$]')
+
+viz.phase_with_profiles(ds, sp, phase_profile, x_field=('gas', 'my_temperature'),
+                        y_field=('gas', 'my_H_nuclei_density'),
+                        z_field=('gas', 'flux_H1_6562.80A'),
+                        x_vals=x_vals, y_vals=y_vals, z_vals=z_vals,
+                        x_label='Temperature [K]',
+                        y_label=r'H Nuclei Number Density [cm$^{-3}$]',
+                        z_label=line_title.replace('_', ' ') + 
+                            r' Flux [erg s$^{-1}$ cm$^{-2}$]')
