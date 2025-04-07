@@ -514,83 +514,70 @@ class VisualizationManager:
         plt.close()
     '''
 
-    
     def phase_with_profiles(self, ds, sp, phase_profile,
                         x_field, y_field, z_field,
                         x_vals, y_vals, z_vals, x_label, y_label,
                         z_label):
-        '''
-        Generate a phase plot with additional profile plots.
-        '''
-
         plot_title = f'{self.output_file}_' + \
-            f'{x_field[1]}_{y_field[1]}_{z_field[1]}_phase_profile.png'
+                    f'{x_field[1]}_{y_field[1]}_{z_field[1]}_phase_profile.png'
 
         fname = os.path.join(self.directory, plot_title)
 
+        # Logarithmic scaling of the data
         x_vals = np.log10(x_vals)
         y_vals = np.log10(y_vals)
         z_vals = np.log10(z_vals).transpose()
 
-        # Find the location of the peak z value (max of z_vals)
+        # Find the location of the peak z value
         peak_z_idx = np.unravel_index(np.argmax(z_vals), z_vals.shape)[::-1]
         peak_x = x_vals[peak_z_idx[0]]
         peak_y = y_vals[peak_z_idx[1]]
-        peak_z = z_vals[peak_z_idx]
+        peak_z = z_vals[peak_z_idx[1]][peak_z_idx[0]]
 
         # Create the figure and gridspec layout
-        fig = plt.figure(figsize=(12, 8))
+        fig = plt.figure(figsize=(10, 8))
         gs = GridSpec(4, 4, figure=fig)
 
         # Central phase plot (imshow)
-        ax0 = fig.add_subplot(gs[1:4, 0:3])
+        ax0 = fig.add_subplot(gs[1:4, 0:3])  # Phase plot takes a larger area
         cax = ax0.imshow(z_vals, origin="lower", aspect="auto",
                          extent=(min(x_vals), max(x_vals), min(y_vals),
                                  max(y_vals)))
         ax0.set_xlabel(x_label)
         ax0.set_ylabel(y_label)
-
-        # Add the red dot marking the peak
         ax0.scatter(peak_x, peak_y, color="red",
                     label=f"Peak ({peak_x:.2f}, {peak_y:.2f}, {peak_z:.2f})")
         ax0.legend(loc="upper right")
 
         # Profile plot at the top (z vs x)
-        # Averaging over y bins (along each x slice)
-        ax1 = fig.add_subplot(gs[0, 0:3], sharex=ax0)
-        avg_z_vals_x = np.mean(10 ** z_vals, axis=1)
+        ax1 = fig.add_subplot(gs[0, 0:3])  # Profile plot touching the top border of phase plot
+        avg_z_vals_x = np.mean(10 ** z_vals, axis=1)[::-1]
+        avg_z_vals_x[avg_z_vals_x < 1e-30] = 1e-30
         ax1.plot(x_vals, np.log10(avg_z_vals_x), color="blue")
-
-        # Add red dot on the x-profile plot for the peak
-        ax1.scatter(peak_x, np.log10(avg_z_vals_x[np.argmax(z_vals[peak_z_idx[0], :])]), color="red", label=f"Peak ({peak_x:.2f})")
-        ax1.set_ylabel(z_label)
+        # Add a red dot at the peak location on the top profile
+        ax1.scatter(peak_x, np.log10(avg_z_vals_x[np.argmax(x_vals == peak_x)]), color='red', s=50)  # Single red dot at peak
+        ax1.set_xlim(ax0.get_xlim())  # Ensure x-axis of top profile matches phase plot
+        ax1.tick_params(axis='x', which='both', bottom=False, top=False)  # Remove x-axis ticks
+        ax1.set_xticklabels([])
 
         # Profile plot on the right (z vs y)
-        # Averaging over x bins (along each y slice)
-        ax2 = fig.add_subplot(gs[1:4, 3], sharey=ax0)
-        avg_z_vals_y = np.mean(10 ** z_vals, axis=0)
+        ax2 = fig.add_subplot(gs[1:4, 3])  # Profile plot touching the right border of phase plot
+        avg_z_vals_y = np.mean(10 ** z_vals, axis=0)[::-1]
+        avg_z_vals_y[avg_z_vals_y < 1e-30] = 1e-30
         ax2.plot(np.log10(avg_z_vals_y), y_vals, color="blue")
+        # Add a red dot at the peak location on the right profile
+        ax2.scatter(np.log10(avg_z_vals_y[np.argmax(y_vals == peak_y)]), peak_y, color='red', s=50)  # Single red dot at peak
+        ax2.set_ylim(ax0.get_ylim())  # Ensure y-axis of right profile matches phase plot
+        ax2.tick_params(axis='y', which='both', left=False, right=False)  # Remove y-axis ticks
+        ax2.set_yticklabels([])
 
-        # Add red dot on the y-profile plot for the peak
-        ax2.scatter(np.log10(avg_z_vals_y[np.argmax(z_vals[:, peak_z_idx[1]])]), peak_y, color="red", label=f"Peak ({peak_y:.2f})")
-        ax2.set_xlabel(z_label)
+        # Adjust layout and position the colorbar
+        fig.tight_layout(rect=[0, 0, 0.85, 1])  # Leave more space for the colorbar
 
-        # Adjust the layout
-        fig.tight_layout(rect=[0, 0, 0.9, 1])
-
-        # Remove the ticks and labels from the borders of the phase plot
-        ax0.get_xaxis().set_ticks([])
-        ax0.get_yaxis().set_ticks([])
-
-        # Remove the ticks and labels on the profile axes that touch the phase plot
-        ax1.get_xaxis().set_ticks([])
-        ax1.get_yaxis().set_ticks([])
-
-        ax2.get_xaxis().set_ticks([])
-        ax2.get_yaxis().set_ticks([])
-
-        # Add colorbar on the right side
-        fig.colorbar(cax, ax=ax0, orientation='vertical', label=z_label)
+        # Add colorbar on the right side of the profile plot
+        #fig.colorbar(cax, ax=ax0, orientation='vertical', label=z_label, pad=0.05)
+        cbar_ax = fig.add_axes([0.87, 0.15, 0.03, 0.7])  # Position the colorbar outside the profile plot area
+        fig.colorbar(cax, cax=cbar_ax, orientation='vertical', label=z_label)
 
         # Save the figure
         plt.savefig(fname, dpi=300)
