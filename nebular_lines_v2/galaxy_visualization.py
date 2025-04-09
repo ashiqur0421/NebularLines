@@ -698,6 +698,7 @@ class VisualizationManager:
         '''
 
         # Copy information files from data folder to analysis
+        # TODO logSFC
         sim_info_files = [
             os.path.join(self.file_dir, f'header_{self.sim_run}.txt'),
             os.path.join(self.file_dir, 'hydro_file_descriptor.txt'),
@@ -775,8 +776,8 @@ class VisualizationManager:
         temp_min = float(re.search(temp_min_pattern, file_content).group(1)) 
         '''
 
-    def plot_cumulative_field(self, ds, sp, width, center, field,
-                              weight_field, title, fname):
+    def plot_cumulative_field(self, ds, sp, field, title, fname,
+                              idx_lims=None):
         '''
         Flatten and order the values in an image of a field 
 
@@ -784,29 +785,22 @@ class VisualizationManager:
         -----------
         ds: loaded RAMSES-RT data set
         sp: sphere data object to project within
-        center (List, float): center (array of 3 values) in code units
-        width (tuple, int and str): width in code units or formatted with 
-            units, e.g. (1500, 'pc')
         field (tuple, str): list of fields to plot, e.g. 
             ('gas', 'temperature')
-        weight_field (tuple, str): list of fields to weight 
-            projections (or None if unweighted)
         title (str): title
         fname (str): figure name
+        idx_lims (tuple, int): range of indices/cells to plot
         '''
 
-        p = self.proj_plot(ds, sp, width, center, field, weight_field)
+        pix = sp[field].value
+        pix_sort = np.sort(pix, axis=None)[::-1]
+        idxs = np.arange(0, len(pix_sort), 1)
+        cum_val = np.cumsum(pix_sort) / np.sum(pix_sort)
+
+        if idx_lims is not None:
+            idxs = idxs[idx_lims[0]: idx_lims[1]]
+            cum_val = cum_val[idx_lims[0]: idx_lims[1]]
         
-
-        plot_frb = p.frb
-        p_img = np.array(plot_frb[field[0], field[1]])
-
-        im_sorted = np.sort(p_img, axis=None)[::-1]
-        idxs = np.arange(0, len(im_sorted), 1)
-
-        # Normalized
-        cum_val = np.cumsum(im_sorted) / np.sum(im_sorted)
-
         fig = plt.figure(figsize=(8, 6))
         plt.xlabel('Index')
         plt.ylabel('Cumulative Value')

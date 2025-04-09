@@ -103,6 +103,10 @@ def _my_H_nuclei_density(field, data):
 
     return dn*XH_RAMSES/mH_RAMSES
 
+def OII_ratio(field, data):
+    # TODO lum or flux?
+    return data['gas', 'luminosity_O2_3728.80A']/data['gas', 'luminosity_O2_3726.10A']
+
 
 def _pressure(field, data):
     if 'hydro_thermal_pressure' in dir(ds.fields.ramses): # and 
